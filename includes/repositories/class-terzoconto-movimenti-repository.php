@@ -1,0 +1,59 @@
+<?php
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+class TerzoConto_Movimenti_Repository {
+    private string $table;
+
+    public function __construct() {
+        global $wpdb;
+        $this->table = $wpdb->prefix . 'terzoconto_movimenti';
+    }
+
+    public function get_all(): array {
+        global $wpdb;
+        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY data_movimento DESC, id DESC", ARRAY_A) ?: [];
+    }
+
+    public function create(array $data): bool {
+        global $wpdb;
+        $year = (int) gmdate('Y', strtotime($data['data_movimento']));
+        $progressivo = $this->next_progressivo($year);
+        $now = current_time('mysql');
+
+        return (bool) $wpdb->insert($this->table, [
+            'progressivo_annuale' => $progressivo,
+            'anno' => $year,
+            'data_movimento' => $data['data_movimento'],
+            'importo' => $data['importo'],
+            'tipo' => $data['tipo'],
+            'categoria_associazione_id' => $data['categoria_associazione_id'],
+            'conto_id' => $data['conto_id'],
+            'raccolta_fondi_id' => $data['raccolta_fondi_id'] ?: null,
+            'descrizione' => $data['descrizione'],
+            'user_id' => get_current_user_id(),
+            'stato' => 'attivo',
+            'created_at' => $now,
+            'updated_at' => $now,
+        ], ['%d', '%d', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s']);
+    }
+
+    private function next_progressivo(int $year): int {
+        global $wpdb;
+        $max = (int) $wpdb->get_var($wpdb->prepare("SELECT MAX(progressivo_annuale) FROM {$this->table} WHERE anno = %d", $year));
+        return $max + 1;
+    }
+
+    public function mark_annullato(int $id): bool {
+        global $wpdb;
+        return false !== $wpdb->update(
+            $this->table,
+            ['stato' => 'annullato', 'updated_at' => current_time('mysql')],
+            ['id' => $id],
+            ['%s', '%s'],
+            ['%d']
+        );
+    }
+}
