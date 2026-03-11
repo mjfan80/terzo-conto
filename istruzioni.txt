@@ -1,0 +1,2 @@
+Users\XXXXX\Local Sites\terzo-conto\app\public\wp-content\plugins
+git clone https://github.com/mjfan80/terzo-conto.git
