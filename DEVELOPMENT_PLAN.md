@@ -1,5 +1,7 @@
 # TerzoConto – Piano di sviluppo a commit logici
 
+> Aggiornamento: schema `categorie_modello_d` riallineato al Modello D ETS con chiave logica `(area, numero, tipo)`, `tipo` ENUM (`E`,`U`) e seed completo delle voci ufficiali.
+
 ## Fase 1 — Definizione schema database
 **File da creare/modificare**
 - `includes/class-terzoconto-activator.php`
