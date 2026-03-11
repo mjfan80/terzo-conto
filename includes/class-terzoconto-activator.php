@@ -17,12 +17,14 @@ class TerzoConto_Activator {
 
         $sql[] = "CREATE TABLE {$prefix}terzoconto_categorie_modello_d (
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-            codice VARCHAR(50) NOT NULL,
+            area CHAR(1) NOT NULL,
+            numero INT NOT NULL,
+            tipo ENUM('E','U') NOT NULL,
+            codice VARCHAR(10) NOT NULL,
             nome VARCHAR(191) NOT NULL,
-            tipo VARCHAR(20) NOT NULL,
             ordinamento INT NOT NULL DEFAULT 0,
             PRIMARY KEY (id),
-            UNIQUE KEY codice_unico (codice)
+            UNIQUE KEY unique_voce (area, numero, tipo)
         ) {$charset_collate};";
 
         $sql[] = "CREATE TABLE {$prefix}terzoconto_categorie_associazione (
@@ -100,20 +102,71 @@ class TerzoConto_Activator {
         global $wpdb;
 
         $model_d = [
-            ['E1', __('Entrate da quote associative', 'terzo-conto'), 'entrata'],
-            ['E2', __('Entrate da raccolte fondi', 'terzo-conto'), 'entrata'],
-            ['U1', __('Uscite per attività istituzionali', 'terzo-conto'), 'uscita'],
-            ['U2', __('Uscite generali', 'terzo-conto'), 'uscita'],
+            // Uscite (U)
+            ['A', 1, 'U', __('Materie prime, sussidiarie, di consumo e di merci', 'terzo-conto')],
+            ['A', 2, 'U', __('Servizi', 'terzo-conto')],
+            ['A', 3, 'U', __('Godimento beni di terzi', 'terzo-conto')],
+            ['A', 4, 'U', __('Personale', 'terzo-conto')],
+            ['A', 5, 'U', __('Uscite diverse di gestione', 'terzo-conto')],
+            ['B', 1, 'U', __('Materie prime, sussidiarie, di consumo e di merci', 'terzo-conto')],
+            ['B', 2, 'U', __('Servizi', 'terzo-conto')],
+            ['B', 3, 'U', __('Godimento beni di terzi', 'terzo-conto')],
+            ['B', 4, 'U', __('Personale', 'terzo-conto')],
+            ['B', 5, 'U', __('Uscite diverse di gestione', 'terzo-conto')],
+            ['C', 1, 'U', __('Uscite per raccolte fondi abituali', 'terzo-conto')],
+            ['C', 2, 'U', __('Uscite per raccolte fondi occasionali', 'terzo-conto')],
+            ['C', 3, 'U', __('Altre uscite', 'terzo-conto')],
+            ['D', 1, 'U', __('Su rapporti bancari', 'terzo-conto')],
+            ['D', 2, 'U', __('Su investimenti finanziari', 'terzo-conto')],
+            ['D', 3, 'U', __('Su patrimonio edilizio', 'terzo-conto')],
+            ['D', 4, 'U', __('Su altri beni patrimoniali', 'terzo-conto')],
+            ['D', 5, 'U', __('Altre uscite', 'terzo-conto')],
+            ['E', 1, 'U', __('Materie prime, sussidiarie, di consumo e di merci', 'terzo-conto')],
+            ['E', 2, 'U', __('Servizi', 'terzo-conto')],
+            ['E', 3, 'U', __('Godimento beni di terzi', 'terzo-conto')],
+            ['E', 4, 'U', __('Personale', 'terzo-conto')],
+            ['E', 5, 'U', __('Altre uscite', 'terzo-conto')],
+
+            // Entrate (E)
+            ['A', 1, 'E', __('Entrate da quote associative e apporti dei fondatori', 'terzo-conto')],
+            ['A', 2, 'E', __('Entrate dagli associati per attività mutuali', 'terzo-conto')],
+            ['A', 3, 'E', __('Entrate per prestazioni e cessioni ad associati e fondatori', 'terzo-conto')],
+            ['A', 4, 'E', __('Erogazioni liberali', 'terzo-conto')],
+            ['A', 5, 'E', __('Entrate del 5 per mille', 'terzo-conto')],
+            ['A', 6, 'E', __('Contributi da soggetti privati', 'terzo-conto')],
+            ['A', 7, 'E', __('Entrate per prestazioni e cessioni a terzi', 'terzo-conto')],
+            ['A', 8, 'E', __('Contributi da enti pubblici', 'terzo-conto')],
+            ['A', 9, 'E', __('Entrate da contratti con enti pubblici', 'terzo-conto')],
+            ['A', 10, 'E', __('Altre entrate', 'terzo-conto')],
+            ['B', 1, 'E', __('Entrate per prestazioni e cessioni ad associati e fondatori', 'terzo-conto')],
+            ['B', 2, 'E', __('Contributi da soggetti privati', 'terzo-conto')],
+            ['B', 3, 'E', __('Entrate per prestazioni e cessioni a terzi', 'terzo-conto')],
+            ['B', 4, 'E', __('Contributi da enti pubblici', 'terzo-conto')],
+            ['B', 5, 'E', __('Entrate da contratti con enti pubblici', 'terzo-conto')],
+            ['B', 6, 'E', __('Altre entrate', 'terzo-conto')],
+            ['C', 1, 'E', __('Entrate da raccolte fondi abituali', 'terzo-conto')],
+            ['C', 2, 'E', __('Entrate da raccolte fondi occasionali', 'terzo-conto')],
+            ['C', 3, 'E', __('Altre entrate', 'terzo-conto')],
+            ['D', 1, 'E', __('Da rapporti bancari', 'terzo-conto')],
+            ['D', 2, 'E', __('Da altri investimenti finanziari', 'terzo-conto')],
+            ['D', 3, 'E', __('Da patrimonio edilizio', 'terzo-conto')],
+            ['D', 4, 'E', __('Da altri beni patrimoniali', 'terzo-conto')],
+            ['D', 5, 'E', __('Altre entrate', 'terzo-conto')],
+            ['E', 1, 'E', __('Entrate da distacco del personale', 'terzo-conto')],
+            ['E', 2, 'E', __('Altre entrate di supporto generale', 'terzo-conto')],
         ];
 
-        foreach ($model_d as $item) {
+        foreach ($model_d as $index => $item) {
+            $codice = $item[0] . (string) $item[1];
             $wpdb->query(
                 $wpdb->prepare(
-                    "INSERT IGNORE INTO {$prefix}terzoconto_categorie_modello_d (codice, nome, tipo, ordinamento) VALUES (%s, %s, %s, %d)",
+                    "INSERT IGNORE INTO {$prefix}terzoconto_categorie_modello_d (area, numero, tipo, codice, nome, ordinamento) VALUES (%s, %d, %s, %s, %s, %d)",
                     $item[0],
                     $item[1],
                     $item[2],
-                    0
+                    $codice,
+                    $item[3],
+                    $index + 1
                 )
             );
         }

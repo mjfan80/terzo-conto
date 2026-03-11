@@ -19,7 +19,7 @@ class TerzoConto_Report_Service {
             INNER JOIN {$categorie_modeld} md ON md.id = ca.modello_d_id
             WHERE m.anno = %d AND m.stato = 'attivo'
             GROUP BY md.id
-            ORDER BY md.tipo, md.codice",
+            ORDER BY FIELD(md.tipo, 'U', 'E') ASC, md.area ASC, md.numero ASC",
             $year
         );
 

@@ -22,7 +22,7 @@ class TerzoConto_Categorie_Repository {
 
     public function get_modello_d(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table_modeld} ORDER BY tipo ASC, codice ASC", ARRAY_A) ?: [];
+        return $wpdb->get_results("SELECT * FROM {$this->table_modeld} ORDER BY FIELD(tipo, 'U', 'E') ASC, area ASC, numero ASC", ARRAY_A) ?: [];
     }
 
     public function create_associazione(string $nome, int $modello_d_id, string $descrizione): bool {
