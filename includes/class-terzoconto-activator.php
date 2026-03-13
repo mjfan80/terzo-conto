@@ -65,6 +65,7 @@ class TerzoConto_Activator {
             categoria_associazione_id BIGINT UNSIGNED NOT NULL,
             conto_id BIGINT UNSIGNED NOT NULL,
             raccolta_fondi_id BIGINT UNSIGNED NULL,
+            anagrafica_id BIGINT UNSIGNED NULL,
             descrizione TEXT NULL,
             user_id BIGINT UNSIGNED NOT NULL,
             stato VARCHAR(20) NOT NULL DEFAULT 'attivo',
@@ -74,7 +75,55 @@ class TerzoConto_Activator {
             KEY anno_progressivo (anno, progressivo_annuale),
             KEY categoria_associazione_id (categoria_associazione_id),
             KEY conto_id (conto_id),
-            KEY raccolta_fondi_id (raccolta_fondi_id)
+            KEY raccolta_fondi_id (raccolta_fondi_id),
+            KEY anagrafica_id (anagrafica_id)
+        ) {$charset_collate};";
+
+        $sql[] = "CREATE TABLE {$prefix}terzoconto_anagrafiche (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            tipo VARCHAR(20) NOT NULL DEFAULT 'persona',
+            codice_fiscale VARCHAR(16) NULL,
+            partita_iva VARCHAR(11) NULL,
+            nome VARCHAR(100) NULL,
+            cognome VARCHAR(100) NULL,
+            ragione_sociale VARCHAR(200) NULL,
+            email VARCHAR(200) NULL,
+            telefono VARCHAR(50) NULL,
+            indirizzo VARCHAR(200) NULL,
+            cap VARCHAR(10) NULL,
+            comune VARCHAR(100) NULL,
+            provincia VARCHAR(2) NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL,
+            PRIMARY KEY (id),
+            KEY codice_fiscale (codice_fiscale)
+        ) {$charset_collate};";
+
+        $sql[] = "CREATE TABLE {$prefix}terzoconto_comunicazioni_ae (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            anno INT NOT NULL,
+            data_generazione DATETIME NULL,
+            file_path VARCHAR(255) NULL,
+            record_count INT NULL,
+            utente_id BIGINT UNSIGNED NULL,
+            created_at DATETIME NULL,
+            PRIMARY KEY (id),
+            KEY anno (anno)
+        ) {$charset_collate};";
+
+        $sql[] = "CREATE TABLE {$prefix}terzoconto_settings (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            nome_ente VARCHAR(255) NULL,
+            codice_fiscale VARCHAR(16) NULL,
+            partita_iva VARCHAR(11) NULL,
+            numero_runts VARCHAR(50) NULL,
+            indirizzo VARCHAR(255) NULL,
+            email VARCHAR(200) NULL,
+            telefono VARCHAR(50) NULL,
+            logo_url VARCHAR(255) NULL,
+            created_at DATETIME NULL,
+            updated_at DATETIME NULL,
+            PRIMARY KEY (id)
         ) {$charset_collate};";
 
         $sql[] = "CREATE TABLE {$prefix}terzoconto_regole (
