@@ -12,6 +12,7 @@ class TerzoConto_Admin {
         private TerzoConto_Categorie_Repository $categorie,
         private TerzoConto_Conti_Repository $conti,
         private TerzoConto_Raccolte_Repository $raccolte,
+        private TerzoConto_Anagrafiche_Repository $anagrafiche,
         private TerzoConto_Import_Service $import_service,
         private TerzoConto_Report_Service $report_service
     ) {
@@ -43,20 +44,32 @@ class TerzoConto_Admin {
 
         switch ($action) {
             case 'add_movimento':
+            case 'update_movimento':
                 $raccolta_id = absint($_POST['raccolta_fondi_id'] ?? 0);
                 if ($raccolta_id > 0 && ! $this->raccolte->is_open($raccolta_id)) {
                     add_settings_error('terzoconto', 'raccolta_chiusa', __('La raccolta fondi è chiusa.', 'terzo-conto'), 'error');
                     break;
                 }
-                $this->movimenti->create([
+
+                $payload = [
                     'data_movimento' => sanitize_text_field(wp_unslash($_POST['data_movimento'] ?? '')),
                     'importo' => (float) str_replace(',', '.', (string) ($_POST['importo'] ?? 0)),
                     'tipo' => sanitize_text_field(wp_unslash($_POST['tipo'] ?? 'entrata')),
                     'categoria_associazione_id' => absint($_POST['categoria_associazione_id'] ?? 0),
                     'conto_id' => absint($_POST['conto_id'] ?? 0),
                     'raccolta_fondi_id' => $raccolta_id,
+                    'anagrafica_id' => absint($_POST['anagrafica_id'] ?? 0),
                     'descrizione' => sanitize_text_field(wp_unslash($_POST['descrizione'] ?? '')),
-                ]);
+                ];
+
+                if ($action === 'add_movimento') {
+                    $this->movimenti->create($payload);
+                } else {
+                    $movimento_id = absint($_POST['id'] ?? 0);
+                    if ($movimento_id > 0) {
+                        $this->movimenti->update($movimento_id, $payload);
+                    }
+                }
                 break;
             case 'add_categoria_associazione':
                 $this->categorie->create_associazione(
@@ -68,8 +81,22 @@ class TerzoConto_Admin {
             case 'add_conto':
                 $this->conti->create(
                     sanitize_text_field(wp_unslash($_POST['nome'] ?? '')),
-                    sanitize_text_field(wp_unslash($_POST['descrizione'] ?? ''))
+                    sanitize_text_field(wp_unslash($_POST['descrizione'] ?? '')),
+                    isset($_POST['tracciabile']) ? 1 : 0,
+                    isset($_POST['attivo']) ? 1 : 0
                 );
+                break;
+            case 'update_conto':
+                $conto_id = absint($_POST['id'] ?? 0);
+                if ($conto_id > 0) {
+                    $this->conti->update(
+                        $conto_id,
+                        sanitize_text_field(wp_unslash($_POST['nome'] ?? '')),
+                        sanitize_text_field(wp_unslash($_POST['descrizione'] ?? '')),
+                        isset($_POST['tracciabile']) ? 1 : 0,
+                        isset($_POST['attivo']) ? 1 : 0
+                    );
+                }
                 break;
             case 'add_raccolta':
                 $this->raccolte->create([
@@ -94,10 +121,14 @@ class TerzoConto_Admin {
         $categorie = $this->categorie->get_associazione();
         $conti = $this->conti->get_all();
         $raccolte = $this->raccolte->get_aperte();
+        $anagrafiche = $this->anagrafiche->search('');
+
+        $edit_id = absint($_GET['edit_movimento_id'] ?? 0);
+        $movimento = $edit_id > 0 ? $this->movimenti->find_by_id($edit_id) : null;
 
         echo '<div class="wrap"><h1>TerzoConto - ' . esc_html__('Movimenti', 'terzo-conto') . '</h1>';
         settings_errors('terzoconto');
-        $this->render_movimento_form($categorie, $conti, $raccolte);
+        $this->render_movimento_form($categorie, $conti, $raccolte, $anagrafiche, $movimento);
         $table = new TerzoConto_Movimenti_List_Table($movimenti);
         $table->prepare_items();
         $table->display();
@@ -131,16 +162,37 @@ class TerzoConto_Admin {
 
     public function render_conti(): void {
         $conti = $this->conti->get_all();
+        $edit_id = absint($_GET['edit_conto_id'] ?? 0);
+        $conto = $edit_id > 0 ? $this->conti->find_by_id($edit_id) : null;
+        $is_edit = is_array($conto);
+
         echo '<div class="wrap"><h1>' . esc_html__('Conti', 'terzo-conto') . '</h1>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="add_conto" />';
-        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome conto', 'terzo-conto') . '" /></p>';
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" /></p>';
-        submit_button(__('Aggiungi conto', 'terzo-conto'));
+        echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_conto' : 'add_conto') . '" />';
+        if ($is_edit) {
+            echo '<input type="hidden" name="id" value="' . esc_attr((string) $conto['id']) . '" />';
+        }
+        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome conto', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['nome'] ?? '')) . '" /></p>';
+        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['descrizione'] ?? '')) . '" /></p>';
+        echo '<p><label><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label></p>';
+        echo '<p><label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label></p>';
+        submit_button($is_edit ? __('Aggiorna conto', 'terzo-conto') : __('Aggiungi conto', 'terzo-conto'));
         echo '</form><hr /><ul>';
-        foreach ($conti as $conto) {
-            echo '<li>' . esc_html($conto['nome']) . '</li>';
+        foreach ($conti as $row) {
+            $edit_url = add_query_arg(['page' => 'terzoconto-conti', 'edit_conto_id' => (int) $row['id']], admin_url('admin.php'));
+            $meta = [];
+            if (! empty($row['tracciabile'])) {
+                $meta[] = __('tracciabile', 'terzo-conto');
+            }
+            if (empty($row['attivo'])) {
+                $meta[] = __('non attivo', 'terzo-conto');
+            }
+            echo '<li><a href="' . esc_url($edit_url) . '">' . esc_html($row['nome']) . '</a>';
+            if ($meta) {
+                echo ' - ' . esc_html(implode(', ', $meta));
+            }
+            echo '</li>';
         }
         echo '</ul></div>';
     }
@@ -209,30 +261,63 @@ class TerzoConto_Admin {
         echo '</div>';
     }
 
-    private function render_movimento_form(array $categorie, array $conti, array $raccolte): void {
+    private function render_movimento_form(array $categorie, array $conti, array $raccolte, array $anagrafiche, ?array $movimento = null): void {
+        $is_edit = is_array($movimento);
+
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="add_movimento" />';
-        echo '<p><input type="date" name="data_movimento" required /> <input type="text" name="importo" required placeholder="0,00" />';
-        echo '<select name="tipo"><option value="entrata">' . esc_html__('Entrata', 'terzo-conto') . '</option><option value="uscita">' . esc_html__('Uscita', 'terzo-conto') . '</option></select></p>';
+        echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_movimento' : 'add_movimento') . '" />';
+        if ($is_edit) {
+            echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
+        }
+
+        echo '<p><input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? '')) . '" /> <input type="text" name="importo" required placeholder="0,00" value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" />';
+        $tipo = $movimento['tipo'] ?? 'entrata';
+        echo '<select name="tipo"><option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option><option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option></select></p>';
+
         echo '<p><select name="categoria_associazione_id" required>';
+        $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
         foreach ($categorie as $cat) {
-            echo '<option value="' . esc_attr((string) $cat['id']) . '">' . esc_html($cat['nome']) . '</option>';
+            echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($cat['nome']) . '</option>';
         }
         echo '</select>';
+
         echo '<select name="conto_id" required>';
+        $selected_conto = (int) ($movimento['conto_id'] ?? 0);
         foreach ($conti as $conto) {
-            echo '<option value="' . esc_attr((string) $conto['id']) . '">' . esc_html($conto['nome']) . '</option>';
+            echo '<option value="' . esc_attr((string) $conto['id']) . '"' . selected($selected_conto, (int) $conto['id'], false) . '>' . esc_html($conto['nome']) . '</option>';
         }
         echo '</select></p>';
+
         echo '<p><select name="raccolta_fondi_id"><option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
+        $selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
         foreach ($raccolte as $raccolta) {
-            echo '<option value="' . esc_attr((string) $raccolta['id']) . '">' . esc_html($raccolta['nome']) . '</option>';
+            echo '<option value="' . esc_attr((string) $raccolta['id']) . '"' . selected($selected_raccolta, (int) $raccolta['id'], false) . '>' . esc_html($raccolta['nome']) . '</option>';
         }
         echo '</select></p>';
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" /></p>';
-        submit_button(__('Aggiungi movimento', 'terzo-conto'));
+
+        echo '<p><label for="anagrafica_id">' . esc_html__('Soggetto / Pagatore', 'terzo-conto') . '</label><br />';
+        echo '<select name="anagrafica_id" id="anagrafica_id">';
+        echo '<option value="0">' . esc_html__('Nessuno', 'terzo-conto') . '</option>';
+        $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
+        foreach ($anagrafiche as $anagrafica) {
+            $label = $this->format_anagrafica_label($anagrafica);
+            echo '<option value="' . esc_attr((string) $anagrafica['id']) . '"' . selected($selected_anagrafica, (int) $anagrafica['id'], false) . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select></p>';
+
+        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+        submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
         echo '</form><hr />';
+    }
+
+    private function format_anagrafica_label(array $anagrafica): string {
+        if (($anagrafica['tipo'] ?? '') === 'azienda') {
+            return trim((string) ($anagrafica['ragione_sociale'] ?? ''));
+        }
+
+        $label = trim((string) (($anagrafica['nome'] ?? '') . ' ' . ($anagrafica['cognome'] ?? '')));
+        return $label !== '' ? $label : (string) __('Anagrafica senza nome', 'terzo-conto');
     }
 
     private function handle_import_preview(): void {

@@ -17,6 +17,12 @@ class TerzoConto_Movimenti_Repository {
         return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY data_movimento DESC, id DESC", ARRAY_A) ?: [];
     }
 
+    public function find_by_id(int $id): ?array {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
+        return is_array($row) ? $row : null;
+    }
+
     public function create(array $data): bool {
         global $wpdb;
         $year = (int) gmdate('Y', strtotime($data['data_movimento']));
@@ -32,12 +38,35 @@ class TerzoConto_Movimenti_Repository {
             'categoria_associazione_id' => $data['categoria_associazione_id'],
             'conto_id' => $data['conto_id'],
             'raccolta_fondi_id' => $data['raccolta_fondi_id'] ?: null,
+            'anagrafica_id' => $data['anagrafica_id'] ?: null,
             'descrizione' => $data['descrizione'],
             'user_id' => get_current_user_id(),
             'stato' => 'attivo',
             'created_at' => $now,
             'updated_at' => $now,
-        ], ['%d', '%d', '%s', '%f', '%s', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s']);
+        ], ['%d', '%d', '%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s']);
+    }
+
+    public function update(int $id, array $data): bool {
+        global $wpdb;
+
+        return false !== $wpdb->update(
+            $this->table,
+            [
+                'data_movimento' => $data['data_movimento'],
+                'importo' => $data['importo'],
+                'tipo' => $data['tipo'],
+                'categoria_associazione_id' => $data['categoria_associazione_id'],
+                'conto_id' => $data['conto_id'],
+                'raccolta_fondi_id' => $data['raccolta_fondi_id'] ?: null,
+                'anagrafica_id' => $data['anagrafica_id'] ?: null,
+                'descrizione' => $data['descrizione'],
+                'updated_at' => current_time('mysql'),
+            ],
+            ['id' => $id],
+            ['%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s'],
+            ['%d']
+        );
     }
 
     private function next_progressivo(int $year): int {

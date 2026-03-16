@@ -17,8 +17,39 @@ class TerzoConto_Conti_Repository {
         return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY nome ASC", ARRAY_A) ?: [];
     }
 
-    public function create(string $nome, string $descrizione): bool {
+    public function find_by_id(int $id): ?array {
         global $wpdb;
-        return (bool) $wpdb->insert($this->table, ['nome' => $nome, 'descrizione' => $descrizione, 'attivo' => 1], ['%s', '%s', '%d']);
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
+        return is_array($row) ? $row : null;
+    }
+
+    public function create(string $nome, string $descrizione, int $tracciabile = 0, int $attivo = 1): bool {
+        global $wpdb;
+        return (bool) $wpdb->insert(
+            $this->table,
+            [
+                'nome' => $nome,
+                'descrizione' => $descrizione,
+                'tracciabile' => $tracciabile,
+                'attivo' => $attivo,
+            ],
+            ['%s', '%s', '%d', '%d']
+        );
+    }
+
+    public function update(int $id, string $nome, string $descrizione, int $tracciabile, int $attivo): bool {
+        global $wpdb;
+        return false !== $wpdb->update(
+            $this->table,
+            [
+                'nome' => $nome,
+                'descrizione' => $descrizione,
+                'tracciabile' => $tracciabile,
+                'attivo' => $attivo,
+            ],
+            ['id' => $id],
+            ['%s', '%s', '%d', '%d'],
+            ['%d']
+        );
     }
 }

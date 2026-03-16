@@ -45,6 +45,15 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         if ($column_name === 'importo') {
             return esc_html(number_format((float) $item[$column_name], 2, ',', '.'));
         }
+
+        if ($column_name === 'id') {
+            $edit_url = add_query_arg([
+                'page' => 'terzoconto',
+                'edit_movimento_id' => (int) $item['id'],
+            ], admin_url('admin.php'));
+            return '<a href="' . esc_url($edit_url) . '">' . esc_html((string) $item['id']) . '</a>';
+        }
+
         return esc_html((string) ($item[$column_name] ?? ''));
     }
 }

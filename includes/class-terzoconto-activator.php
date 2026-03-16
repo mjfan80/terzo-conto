@@ -41,6 +41,7 @@ class TerzoConto_Activator {
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             nome VARCHAR(191) NOT NULL,
             descrizione TEXT NULL,
+            tracciabile TINYINT(1) NOT NULL DEFAULT 0,
             attivo TINYINT(1) NOT NULL DEFAULT 1,
             PRIMARY KEY (id)
         ) {$charset_collate};";
@@ -218,6 +219,23 @@ class TerzoConto_Activator {
                     $index + 1
                 )
             );
+        }
+
+        $categorie_assoc_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}terzoconto_categorie_associazione");
+        if ($categorie_assoc_count === 0) {
+            $model_d_rows = $wpdb->get_results("SELECT id, nome FROM {$prefix}terzoconto_categorie_modello_d ORDER BY ordinamento ASC", ARRAY_A) ?: [];
+            foreach ($model_d_rows as $row) {
+                $wpdb->insert(
+                    "{$prefix}terzoconto_categorie_associazione",
+                    [
+                        'nome' => $row['nome'],
+                        'modello_d_id' => (int) $row['id'],
+                        'descrizione' => null,
+                        'attiva' => 1,
+                    ],
+                    ['%s', '%d', '%s', '%d']
+                );
+            }
         }
 
         $accounts = ['Cassa', 'Conto corrente', 'PayPal', 'Satispay'];
