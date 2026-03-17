@@ -67,7 +67,14 @@ class TerzoConto_Admin {
                 } else {
                     $movimento_id = absint($_POST['id'] ?? 0);
                     if ($movimento_id > 0) {
-                        $this->movimenti->update($movimento_id, $payload);
+                        $updated = $this->movimenti->update($movimento_id, $payload);
+                        if (! $updated) {
+                            $error_message = $this->movimenti->get_last_error();
+                            if ($error_message === '') {
+                                $error_message = __('Impossibile aggiornare il movimento.', 'terzo-conto');
+                            }
+                            add_settings_error('terzoconto', 'movimento_update_error', $error_message, 'error');
+                        }
                     }
                 }
                 break;
@@ -125,6 +132,24 @@ class TerzoConto_Admin {
 
         $edit_id = absint($_GET['edit_movimento_id'] ?? 0);
         $movimento = $edit_id > 0 ? $this->movimenti->find_by_id($edit_id) : null;
+
+        if (is_array($movimento) && ! empty($movimento['raccolta_fondi_id'])) {
+            $selected_raccolta_id = (int) $movimento['raccolta_fondi_id'];
+            $found = false;
+            foreach ($raccolte as $raccolta) {
+                if ((int) $raccolta['id'] === $selected_raccolta_id) {
+                    $found = true;
+                    break;
+                }
+            }
+
+            if (! $found) {
+                $selected_raccolta = $this->raccolte->find_by_id($selected_raccolta_id);
+                if (is_array($selected_raccolta)) {
+                    $raccolte[] = $selected_raccolta;
+                }
+            }
+        }
 
         echo '<div class="wrap"><h1>TerzoConto - ' . esc_html__('Movimenti', 'terzo-conto') . '</h1>';
         settings_errors('terzoconto');
