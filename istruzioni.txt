@@ -1,2 +1,6 @@
 Users\XXXXX\Local Sites\terzo-conto\app\public\wp-content\plugins
 git clone https://github.com/mjfan80/terzo-conto.git
+
+nel caso di clone di un branche e non del main mentre si fanno i test
+cd wp-content/plugins
+git clone -b codex/database-schema-v1 https://github.com/mjfan80/terzo-conto.git terzo-conto-test
