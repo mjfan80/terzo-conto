@@ -291,6 +291,7 @@ class TerzoConto_Admin {
         $selected_conto = is_array($preview) ? (int) ($preview['conto_id'] ?? 0) : 0;
 
         echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzo-conto') . '</h1>';
+        settings_errors('terzoconto');
         echo '<form method="post" enctype="multipart/form-data">';
         wp_nonce_field('terzoconto_action_nonce');
         echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
