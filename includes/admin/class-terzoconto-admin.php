@@ -7,6 +7,8 @@ if (! defined('ABSPATH')) {
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-movimenti-list-table.php';
 
 class TerzoConto_Admin {
+    private ?array $submitted_movimento = null;
+
     public function __construct(
         private TerzoConto_Movimenti_Repository $movimenti,
         private TerzoConto_Categorie_Repository $categorie,
@@ -45,27 +47,25 @@ class TerzoConto_Admin {
         switch ($action) {
             case 'add_movimento':
             case 'update_movimento':
-                $raccolta_id = absint($_POST['raccolta_fondi_id'] ?? 0);
-                if ($raccolta_id > 0 && ! $this->raccolte->is_open($raccolta_id)) {
-                    add_settings_error('terzoconto', 'raccolta_chiusa', __('La raccolta fondi è chiusa.', 'terzo-conto'), 'error');
+                $payload = $this->sanitize_movimento_data($_POST);
+                $movimento_id = $action === 'update_movimento' ? absint($_POST['id'] ?? 0) : 0;
+                $this->submitted_movimento = $payload;
+                if ($movimento_id > 0) {
+                    $this->submitted_movimento['id'] = $movimento_id;
+                }
+
+                if (! $this->validate_movimento_data($payload, $movimento_id)) {
                     break;
                 }
 
-                $payload = [
-                    'data_movimento' => sanitize_text_field(wp_unslash($_POST['data_movimento'] ?? '')),
-                    'importo' => (float) str_replace(',', '.', (string) ($_POST['importo'] ?? 0)),
-                    'tipo' => sanitize_text_field(wp_unslash($_POST['tipo'] ?? 'entrata')),
-                    'categoria_associazione_id' => absint($_POST['categoria_associazione_id'] ?? 0),
-                    'conto_id' => absint($_POST['conto_id'] ?? 0),
-                    'raccolta_fondi_id' => $raccolta_id,
-                    'anagrafica_id' => absint($_POST['anagrafica_id'] ?? 0),
-                    'descrizione' => sanitize_text_field(wp_unslash($_POST['descrizione'] ?? '')),
-                ];
-
                 if ($action === 'add_movimento') {
-                    $this->movimenti->create($payload);
+                    $created = $this->movimenti->create($payload);
+                    if (! $created) {
+                        add_settings_error('terzoconto', 'movimento_create_error', __('Impossibile creare il movimento.', 'terzo-conto'), 'error');
+                        break;
+                    }
+                    $this->submitted_movimento = null;
                 } else {
-                    $movimento_id = absint($_POST['id'] ?? 0);
                     if ($movimento_id > 0) {
                         $updated = $this->movimenti->update($movimento_id, $payload);
                         if (! $updated) {
@@ -74,7 +74,9 @@ class TerzoConto_Admin {
                                 $error_message = __('Impossibile aggiornare il movimento.', 'terzo-conto');
                             }
                             add_settings_error('terzoconto', 'movimento_update_error', $error_message, 'error');
+                            break;
                         }
+                        $this->submitted_movimento = null;
                     }
                 }
                 break;
@@ -132,6 +134,9 @@ class TerzoConto_Admin {
 
         $edit_id = absint($_GET['edit_movimento_id'] ?? 0);
         $movimento = $edit_id > 0 ? $this->movimenti->find_by_id($edit_id) : null;
+        if (is_array($this->submitted_movimento)) {
+            $movimento = $this->submitted_movimento;
+        }
 
         if (is_array($movimento) && ! empty($movimento['raccolta_fondi_id'])) {
             $selected_raccolta_id = (int) $movimento['raccolta_fondi_id'];
@@ -334,6 +339,73 @@ class TerzoConto_Admin {
         echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
         submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
         echo '</form><hr />';
+    }
+
+    private function sanitize_movimento_data(array $source): array {
+        $tipo = sanitize_text_field(wp_unslash($source['tipo'] ?? 'entrata'));
+        if (! in_array($tipo, ['entrata', 'uscita'], true)) {
+            $tipo = 'entrata';
+        }
+
+        return [
+            'data_movimento' => sanitize_text_field(wp_unslash($source['data_movimento'] ?? '')),
+            'importo' => (float) str_replace(',', '.', (string) wp_unslash($source['importo'] ?? '0')),
+            'tipo' => $tipo,
+            'categoria_associazione_id' => absint($source['categoria_associazione_id'] ?? 0),
+            'conto_id' => absint($source['conto_id'] ?? 0),
+            'raccolta_fondi_id' => absint($source['raccolta_fondi_id'] ?? 0),
+            'anagrafica_id' => absint($source['anagrafica_id'] ?? 0),
+            'descrizione' => sanitize_text_field(wp_unslash($source['descrizione'] ?? '')),
+        ];
+    }
+
+    private function validate_movimento_data(array $data, int $movimento_id = 0): bool {
+        $is_valid = true;
+
+        if ($data['data_movimento'] === '' || ! $this->is_valid_date($data['data_movimento'])) {
+            add_settings_error('terzoconto', 'movimento_data_movimento', __('Inserisci una data movimento valida.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        if ($data['importo'] <= 0) {
+            add_settings_error('terzoconto', 'movimento_importo', __('Inserisci un importo maggiore di zero.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        if ($data['categoria_associazione_id'] <= 0) {
+            add_settings_error('terzoconto', 'movimento_categoria', __('Seleziona una categoria valida.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        if ($data['conto_id'] <= 0) {
+            add_settings_error('terzoconto', 'movimento_conto', __('Seleziona un conto valido.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        $raccolta_id = (int) $data['raccolta_fondi_id'];
+        if ($raccolta_id > 0 && ! $this->raccolte->is_open($raccolta_id)) {
+            add_settings_error('terzoconto', 'raccolta_chiusa', __('La raccolta fondi è chiusa.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        if ($movimento_id > 0 && $data['data_movimento'] !== '') {
+            $current = $this->movimenti->find_by_id($movimento_id);
+            if (is_array($current)) {
+                $current_year = (int) ($current['anno'] ?? 0);
+                $new_year = (int) gmdate('Y', strtotime($data['data_movimento']));
+                if ($current_year > 0 && $new_year !== $current_year) {
+                    add_settings_error('terzoconto', 'movimento_anno', __("Non è possibile modificare l'anno di un movimento. Eliminare il movimento e crearne uno nuovo.", 'terzo-conto'), 'error');
+                    $is_valid = false;
+                }
+            }
+        }
+
+        return $is_valid;
+    }
+
+    private function is_valid_date(string $value): bool {
+        $date = DateTimeImmutable::createFromFormat('Y-m-d', $value);
+        return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value;
     }
 
     private function format_anagrafica_label(array $anagrafica): string {
