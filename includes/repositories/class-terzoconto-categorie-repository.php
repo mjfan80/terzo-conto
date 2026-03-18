@@ -16,7 +16,7 @@ class TerzoConto_Categorie_Repository {
 
     public function get_associazione(): array {
         global $wpdb;
-        $sql = "SELECT ca.*, md.nome AS modello_d_nome, md.codice AS modello_d_codice, md.tipo AS modello_d_tipo FROM {$this->table_assoc} ca INNER JOIN {$this->table_modeld} md ON md.id = ca.modello_d_id ORDER BY ca.nome ASC";
+        $sql = "SELECT ca.*, md.nome AS modello_d_nome, md.codice AS modello_d_codice, md.tipo AS modello_d_tipo, md.area AS modello_d_area, md.numero AS modello_d_numero FROM {$this->table_assoc} ca INNER JOIN {$this->table_modeld} md ON md.id = ca.modello_d_id ORDER BY FIELD(md.tipo, 'U', 'E') ASC, md.area ASC, md.numero ASC, ca.nome ASC, ca.id ASC";
         return $wpdb->get_results($sql, ARRAY_A) ?: [];
     }
 

@@ -354,10 +354,31 @@ class TerzoConto_Admin {
         echo '<p><label for="categoria_associazione_id">' . esc_html__('Categoria', 'terzo-conto') . '</label><br /><select name="categoria_associazione_id" id="categoria_associazione_id" required>';
         echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
         $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
+        $grouped_categories = [];
+
         foreach ($categorie as $cat) {
-            $category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
-            $category_label = $category_code !== '' ? $category_code . ' - ' . $cat['nome'] : $cat['nome'];
-            echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($category_label) . '</option>';
+            $group_label = $this->get_categoria_optgroup_label(
+                (string) ($cat['modello_d_tipo'] ?? ''),
+                (string) ($cat['modello_d_area'] ?? '')
+            );
+
+            if (! isset($grouped_categories[$group_label])) {
+                $grouped_categories[$group_label] = [];
+            }
+
+            $grouped_categories[$group_label][] = $cat;
+        }
+
+        foreach ($grouped_categories as $group_label => $group_categories) {
+            echo '<optgroup label="' . esc_attr($group_label) . '">';
+
+            foreach ($group_categories as $cat) {
+                $category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
+                $category_label = $category_code !== '' ? $category_code . ' - ' . $cat['nome'] : $cat['nome'];
+                echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($category_label) . '</option>';
+            }
+
+            echo '</optgroup>';
         }
         echo '</select></p>';
 
@@ -386,6 +407,26 @@ class TerzoConto_Admin {
         echo '</div>';
         submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
         echo '</form><hr />';
+    }
+
+    private function get_categoria_optgroup_label(string $tipo, string $area): string {
+        $type_labels = [
+            'E' => __('Entrate', 'terzo-conto'),
+            'U' => __('Uscite', 'terzo-conto'),
+        ];
+
+        $area_labels = [
+            'A' => __('Attività di interesse generale', 'terzo-conto'),
+            'B' => __('Attività diverse', 'terzo-conto'),
+            'C' => __('Attività raccolta fondi', 'terzo-conto'),
+            'D' => __('Attività finanziarie/patrimoniali', 'terzo-conto'),
+            'E' => __('Supporto generale', 'terzo-conto'),
+        ];
+
+        $type_label = $type_labels[$tipo] ?? __('Categorie', 'terzo-conto');
+        $area_label = $area_labels[$area] ?? __('Area non specificata', 'terzo-conto');
+
+        return sprintf('%s - %s (%s)', $type_label, $area_label, $area !== '' ? $area : '-');
     }
 
     private function render_movimenti_filters(string $stato_filter): void {
