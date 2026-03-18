@@ -5,6 +5,8 @@ if (! defined('ABSPATH')) {
 }
 
 class TerzoConto_Admin_Anagrafiche {
+    private ?array $submitted_anagrafica = null;
+
     public function __construct(private TerzoConto_Anagrafiche_Repository $anagrafiche_repository) {
     }
 
@@ -34,6 +36,18 @@ class TerzoConto_Admin_Anagrafiche {
 
         $action = sanitize_text_field(wp_unslash($_POST['terzoconto_anagrafica_action']));
         $data = $this->sanitize_anagrafica_data($_POST);
+        $this->submitted_anagrafica = $data;
+
+        if ($action === 'update_anagrafica') {
+            $submitted_id = absint($_POST['id'] ?? 0);
+            if ($submitted_id > 0) {
+                $this->submitted_anagrafica['id'] = $submitted_id;
+            }
+        }
+
+        if (! $this->validate_anagrafica_data($data)) {
+            return;
+        }
 
         if ($action === 'create_anagrafica') {
             $created = $this->anagrafiche_repository->create($data);
@@ -58,12 +72,16 @@ class TerzoConto_Admin_Anagrafiche {
 
         $edit_id = absint($_GET['edit_id'] ?? 0);
         $anagrafica = $edit_id > 0 ? $this->anagrafiche_repository->find_by_id($edit_id) : null;
+        if (is_array($this->submitted_anagrafica)) {
+            $anagrafica = $this->submitted_anagrafica;
+        }
         $rows = $this->anagrafiche_repository->search('');
 
         echo '<div class="wrap">';
         echo '<h1>' . esc_html__('Anagrafiche', 'terzo-conto') . '</h1>';
 
         $this->render_notice();
+        settings_errors('terzoconto_anagrafiche');
         $this->render_form($anagrafica);
         $this->render_table($rows);
 
@@ -192,6 +210,39 @@ class TerzoConto_Admin_Anagrafiche {
             'email' => sanitize_email(wp_unslash($source['email'] ?? '')),
             'telefono' => sanitize_text_field(wp_unslash($source['telefono'] ?? '')),
         ];
+    }
+
+    private function validate_anagrafica_data(array $data): bool {
+        $is_valid = true;
+
+        if ($data['tipo'] === 'azienda') {
+            if ($data['ragione_sociale'] === '') {
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_ragione_sociale', __('Per le aziende la ragione sociale è obbligatoria.', 'terzo-conto'), 'error');
+                $is_valid = false;
+            }
+        } else {
+            if ($data['nome'] === '') {
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_nome', __('Per le persone il nome è obbligatorio.', 'terzo-conto'), 'error');
+                $is_valid = false;
+            }
+
+            if ($data['cognome'] === '') {
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_cognome', __('Per le persone il cognome è obbligatorio.', 'terzo-conto'), 'error');
+                $is_valid = false;
+            }
+        }
+
+        if ($data['email'] !== '' && ! is_email($data['email'])) {
+            add_settings_error('terzoconto_anagrafiche', 'anagrafica_email', __('Inserisci un indirizzo email valido.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        if ($data['codice_fiscale'] === '') {
+            add_settings_error('terzoconto_anagrafiche', 'anagrafica_codice_fiscale', __('Il codice fiscale è obbligatorio.', 'terzo-conto'), 'error');
+            $is_valid = false;
+        }
+
+        return $is_valid;
     }
 
     private function build_label(array $row): string {
