@@ -292,6 +292,20 @@ class TerzoConto_Admin {
 
         echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzo-conto') . '</h1>';
         settings_errors('terzoconto');
+        // RIPRISTINA ERRORI DOPO REDIRECT
+        $stored_errors = get_transient('terzoconto_settings_errors');
+        if ($stored_errors) {
+            foreach ($stored_errors as $error) {
+                add_settings_error(
+                    $error['setting'],
+                    $error['code'],
+                    $error['message'],
+                    $error['type']
+                );
+            }
+            delete_transient('terzoconto_settings_errors');
+            settings_errors('terzoconto');
+        }
         echo '<form method="post" enctype="multipart/form-data">';
         wp_nonce_field('terzoconto_action_nonce');
         echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
@@ -606,6 +620,10 @@ class TerzoConto_Admin {
 
         add_settings_error('terzoconto', 'import_preview_ready', __('Anteprima import generata.', 'terzo-conto'), 'updated');
 
+        //  SALVA GLI ERRORI PER IL REDIRECT
+        set_transient('terzoconto_settings_errors', get_settings_errors(), 30);
+        
+        //  REDIRECT
         wp_redirect(admin_url('admin.php?page=terzoconto-import'));
         exit;
     }
