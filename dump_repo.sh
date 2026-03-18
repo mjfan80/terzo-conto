@@ -34,6 +34,11 @@ EXCLUDE_FILES=(
   "*.mp3"
   "*.woff"
   "*.woff2"
+  "*.LICENSE*"
+  "istruzioni.txt"
+  "ARCHITECTURE.md"
+  "DEVELOPMENT_PLAN.md"
+  "*.gitignore*"
 )
 
 # Costruzione dinamica dei parametri find
