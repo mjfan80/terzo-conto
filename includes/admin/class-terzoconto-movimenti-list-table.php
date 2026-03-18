@@ -51,7 +51,18 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
                 'page' => 'terzoconto',
                 'edit_movimento_id' => (int) $item['id'],
             ], admin_url('admin.php'));
-            return '<a href="' . esc_url($edit_url) . '">' . esc_html((string) $item['id']) . '</a>';
+            $output = '<a href="' . esc_url($edit_url) . '">' . esc_html((string) $item['id']) . '</a>';
+
+            if (($item['stato'] ?? '') !== 'annullato') {
+                $output .= '<form method="post" style="display:inline-block;margin-left:8px;">';
+                $output .= wp_nonce_field('terzoconto_action_nonce', '_wpnonce', true, false);
+                $output .= '<input type="hidden" name="terzoconto_action" value="annulla_movimento" />';
+                $output .= '<input type="hidden" name="id" value="' . esc_attr((string) $item['id']) . '" />';
+                $output .= '<button type="submit" class="button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero annullare questo movimento?', 'terzo-conto')) . '\');">' . esc_html__('Annulla movimento', 'terzo-conto') . '</button>';
+                $output .= '</form>';
+            }
+
+            return $output;
         }
 
         return esc_html((string) ($item[$column_name] ?? ''));

@@ -23,6 +23,7 @@ class TerzoConto_Admin {
     public function hooks(): void {
         add_action('admin_menu', [$this, 'register_menu']);
         add_action('admin_init', [$this, 'handle_post_actions']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
 
     public function register_menu(): void {
@@ -80,6 +81,15 @@ class TerzoConto_Admin {
                     }
                 }
                 break;
+            case 'annulla_movimento':
+                $movimento_id = absint($_POST['id'] ?? 0);
+                if ($movimento_id > 0) {
+                    $annullato = $this->movimenti->mark_annullato($movimento_id);
+                    if (! $annullato) {
+                        add_settings_error('terzoconto', 'movimento_annulla_error', __('Impossibile annullare il movimento.', 'terzo-conto'), 'error');
+                    }
+                }
+                break;
             case 'add_categoria_associazione':
                 $this->categorie->create_associazione(
                     sanitize_text_field(wp_unslash($_POST['nome'] ?? '')),
@@ -126,6 +136,7 @@ class TerzoConto_Admin {
     }
 
     public function render_movimenti(): void {
+        $stato_filter = $this->get_movimento_stato_filter();
         $movimenti = $this->movimenti->get_all();
         $categorie = $this->categorie->get_associazione();
         $conti = $this->conti->get_all();
@@ -156,13 +167,37 @@ class TerzoConto_Admin {
             }
         }
 
+        if ($stato_filter !== '') {
+            $movimenti = array_values(array_filter($movimenti, static function (array $row) use ($stato_filter): bool {
+                return (string) ($row['stato'] ?? '') === $stato_filter;
+            }));
+        }
+
         echo '<div class="wrap"><h1>TerzoConto - ' . esc_html__('Movimenti', 'terzo-conto') . '</h1>';
         settings_errors('terzoconto');
         $this->render_movimento_form($categorie, $conti, $raccolte, $anagrafiche, $movimento);
+        $this->render_movimenti_filters($stato_filter);
         $table = new TerzoConto_Movimenti_List_Table($movimenti);
         $table->prepare_items();
         $table->display();
         echo '</div>';
+    }
+
+    public function enqueue_assets(string $hook): void {
+        if ($hook !== 'toplevel_page_terzoconto') {
+            return;
+        }
+
+        $config = [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('terzoconto_search_anagrafiche_nonce'),
+            'minChars' => 2,
+            'noResults' => __('Nessuna anagrafica trovata.', 'terzo-conto'),
+            'searching' => __('Ricerca in corso…', 'terzo-conto'),
+        ];
+
+        wp_add_inline_style('common', '.terzoconto-movimento-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1100px}.terzoconto-movimento-grid p{margin:0}.terzoconto-ajax-results{display:none;border:1px solid #c3c4c7;background:#fff;max-height:220px;overflow:auto;position:absolute;z-index:1000;width:100%;box-sizing:border-box}.terzoconto-ajax-results button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;cursor:pointer}.terzoconto-ajax-results button:hover,.terzoconto-ajax-results button:focus{background:#f0f0f1}.terzoconto-field-help{display:block;color:#646970;margin-top:4px}.terzoconto-anagrafica-search{position:relative}.terzoconto-filter-form{margin:16px 0}');
+        wp_add_inline_script('jquery-core', 'window.terzoContoAnagrafiche=' . wp_json_encode($config) . ';jQuery(function($){var cfg=window.terzoContoAnagrafiche||{};var $search=$("#terzoconto-anagrafica-search");var $id=$("#anagrafica_id");var $results=$("#terzoconto-anagrafica-results");var xhr=null;function closeResults(){$results.hide().empty();}function selectItem(item){$id.val(item.id);$search.val(item.label);closeResults();}$(document).on("click",function(e){if(!$(e.target).closest(".terzoconto-anagrafica-search").length){closeResults();}});$(document).on("input","#terzoconto-anagrafica-search",function(){var term=$.trim($search.val());if(term.length===0){$id.val(0);closeResults();return;}if(term.length<(cfg.minChars||2)){closeResults();return;}if(xhr){xhr.abort();}$results.html("<div class=\"terzoconto-field-help\">"+(cfg.searching||"")+"</div>").show();xhr=$.get(cfg.ajaxUrl,{action:"terzoconto_search_anagrafiche",nonce:cfg.nonce,term:term}).done(function(items){$results.empty();if(!items||!items.length){$results.html("<div class=\"terzoconto-field-help\">"+(cfg.noResults||"")+"</div>").show();return;}$.each(items,function(_,item){var $btn=$("<button type=\"button\" />").text(item.label);$btn.on("click",function(){selectItem(item);});$results.append($btn);});$results.show();}).fail(function(){closeResults();});});$(document).on("change","#terzoconto-anagrafica-search",function(){if($.trim($search.val())===""){$id.val(0);}});});');
     }
 
     public function render_categorie(): void {
@@ -293,6 +328,15 @@ class TerzoConto_Admin {
 
     private function render_movimento_form(array $categorie, array $conti, array $raccolte, array $anagrafiche, ?array $movimento = null): void {
         $is_edit = is_array($movimento);
+        $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
+        $selected_anagrafica_label = '';
+
+        foreach ($anagrafiche as $anagrafica) {
+            if ((int) ($anagrafica['id'] ?? 0) === $selected_anagrafica) {
+                $selected_anagrafica_label = $this->format_anagrafica_label($anagrafica);
+                break;
+            }
+        }
 
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
@@ -301,44 +345,60 @@ class TerzoConto_Admin {
             echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
         }
 
-        echo '<p><input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? '')) . '" /> <input type="text" name="importo" required placeholder="0,00" value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" />';
+        echo '<div class="terzoconto-movimento-grid">';
+        echo '<p><label for="data_movimento">' . esc_html__('Data movimento', 'terzo-conto') . '</label><br /><input type="date" id="data_movimento" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
+        echo '<p><label for="importo">' . esc_html__('Importo', 'terzo-conto') . '</label><br /><input type="text" id="importo" name="importo" inputmode="decimal" required placeholder="' . esc_attr__('Es. 125,00', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
         $tipo = $movimento['tipo'] ?? 'entrata';
-        echo '<select name="tipo"><option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option><option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option></select></p>';
+        echo '<p><label for="tipo">' . esc_html__('Tipo movimento', 'terzo-conto') . '</label><br /><select name="tipo" id="tipo"><option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option><option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option></select></p>';
 
-        echo '<p><select name="categoria_associazione_id" required>';
+        echo '<p><label for="categoria_associazione_id">' . esc_html__('Categoria', 'terzo-conto') . '</label><br /><select name="categoria_associazione_id" id="categoria_associazione_id" required>';
+        echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
         $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
         foreach ($categorie as $cat) {
-            echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($cat['nome']) . '</option>';
+            $category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
+            $category_label = $category_code !== '' ? $category_code . ' - ' . $cat['nome'] : $cat['nome'];
+            echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($category_label) . '</option>';
         }
-        echo '</select>';
+        echo '</select></p>';
 
-        echo '<select name="conto_id" required>';
+        echo '<p><label for="conto_id">' . esc_html__('Conto', 'terzo-conto') . '</label><br /><select name="conto_id" id="conto_id" required>';
+        echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
         $selected_conto = (int) ($movimento['conto_id'] ?? 0);
         foreach ($conti as $conto) {
             echo '<option value="' . esc_attr((string) $conto['id']) . '"' . selected($selected_conto, (int) $conto['id'], false) . '>' . esc_html($conto['nome']) . '</option>';
         }
         echo '</select></p>';
 
-        echo '<p><select name="raccolta_fondi_id"><option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
+        echo '<p><label for="raccolta_fondi_id">' . esc_html__('Raccolta fondi', 'terzo-conto') . '</label><br /><select name="raccolta_fondi_id" id="raccolta_fondi_id"><option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
         $selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
         foreach ($raccolte as $raccolta) {
             echo '<option value="' . esc_attr((string) $raccolta['id']) . '"' . selected($selected_raccolta, (int) $raccolta['id'], false) . '>' . esc_html($raccolta['nome']) . '</option>';
         }
         echo '</select></p>';
 
-        echo '<p><label for="anagrafica_id">' . esc_html__('Soggetto / Pagatore', 'terzo-conto') . '</label><br />';
-        echo '<select name="anagrafica_id" id="anagrafica_id">';
-        echo '<option value="0">' . esc_html__('Nessuno', 'terzo-conto') . '</option>';
-        $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
-        foreach ($anagrafiche as $anagrafica) {
-            $label = $this->format_anagrafica_label($anagrafica);
-            echo '<option value="' . esc_attr((string) $anagrafica['id']) . '"' . selected($selected_anagrafica, (int) $anagrafica['id'], false) . '>' . esc_html($label) . '</option>';
-        }
-        echo '</select></p>';
+        echo '<p class="terzoconto-anagrafica-search"><label for="terzoconto-anagrafica-search">' . esc_html__('Soggetto / Pagatore', 'terzo-conto') . '</label><br />';
+        echo '<input type="text" id="terzoconto-anagrafica-search" placeholder="' . esc_attr__('Cerca anagrafica per nome o codice fiscale', 'terzo-conto') . '" value="' . esc_attr($selected_anagrafica_label) . '" autocomplete="off" />';
+        echo '<input type="hidden" name="anagrafica_id" id="anagrafica_id" value="' . esc_attr((string) $selected_anagrafica) . '" />';
+        echo '<span class="terzoconto-field-help">' . esc_html__('Digita almeno 2 caratteri per cercare un’anagrafica esistente.', 'terzo-conto') . '</span>';
+        echo '<div id="terzoconto-anagrafica-results" class="terzoconto-ajax-results"></div></p>';
 
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+        echo '<p style="grid-column:1/-1;"><label for="descrizione">' . esc_html__('Descrizione', 'terzo-conto') . '</label><br /><input type="text" class="large-text" id="descrizione" name="descrizione" placeholder="' . esc_attr__('Es. Donazione campagna primavera', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+        echo '</div>';
         submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
         echo '</form><hr />';
+    }
+
+    private function render_movimenti_filters(string $stato_filter): void {
+        echo '<form method="get" class="terzoconto-filter-form">';
+        echo '<input type="hidden" name="page" value="terzoconto" />';
+        echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzo-conto') . '</label>';
+        echo '<select name="stato_movimento" id="stato_movimento">';
+        echo '<option value="">' . esc_html__('Tutti gli stati', 'terzo-conto') . '</option>';
+        echo '<option value="attivo"' . selected($stato_filter, 'attivo', false) . '>' . esc_html__('Attivo', 'terzo-conto') . '</option>';
+        echo '<option value="annullato"' . selected($stato_filter, 'annullato', false) . '>' . esc_html__('Annullato', 'terzo-conto') . '</option>';
+        echo '</select> ';
+        submit_button(__('Filtra', 'terzo-conto'), 'secondary', '', false);
+        echo '</form>';
     }
 
     private function sanitize_movimento_data(array $source): array {
@@ -406,6 +466,11 @@ class TerzoConto_Admin {
     private function is_valid_date(string $value): bool {
         $date = DateTimeImmutable::createFromFormat('Y-m-d', $value);
         return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value;
+    }
+
+    private function get_movimento_stato_filter(): string {
+        $stato = sanitize_text_field(wp_unslash($_GET['stato_movimento'] ?? ''));
+        return in_array($stato, ['attivo', 'annullato'], true) ? $stato : '';
     }
 
     private function format_anagrafica_label(array $anagrafica): string {
