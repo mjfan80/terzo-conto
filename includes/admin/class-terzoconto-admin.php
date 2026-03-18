@@ -129,6 +129,9 @@ class TerzoConto_Admin {
             case 'import_preview':
                 $this->handle_import_preview();
                 break;
+            case 'import_commit':
+                $this->handle_import_commit();
+                break;
             case 'export_movimenti_csv':
                 $this->download_csv();
                 break;
@@ -281,6 +284,12 @@ class TerzoConto_Admin {
     }
 
     public function render_import(): void {
+        $preview = get_transient($this->get_import_preview_transient_key());
+        $categorie = $this->categorie->get_associazione();
+        $conti = $this->conti->get_all();
+        $selected_categoria = is_array($preview) ? (int) ($preview['categoria_associazione_id'] ?? 0) : 0;
+        $selected_conto = is_array($preview) ? (int) ($preview['conto_id'] ?? 0) : 0;
+
         echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzo-conto') . '</h1>';
         echo '<form method="post" enctype="multipart/form-data">';
         wp_nonce_field('terzoconto_action_nonce');
@@ -290,14 +299,57 @@ class TerzoConto_Admin {
         submit_button(__('Carica e anteprima', 'terzo-conto'));
         echo '</form>';
 
-        $preview = get_transient('terzoconto_import_preview_' . get_current_user_id());
-        if (is_array($preview) && ! empty($preview['rows'])) {
-            echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2><table class="widefat"><thead><tr><th>Data</th><th>Importo</th><th>Descrizione</th><th>Possibile duplicato</th></tr></thead><tbody>';
-            foreach ($preview['rows'] as $i => $row) {
-                $is_dupe = in_array($i, $preview['duplicates'], true);
-                echo '<tr><td>' . esc_html($row['data_movimento']) . '</td><td>' . esc_html((string) $row['importo']) . '</td><td>' . esc_html($row['descrizione']) . '</td><td>' . ($is_dupe ? '⚠️' : '') . '</td></tr>';
+        if (is_array($preview) && array_key_exists('rows', $preview)) {
+            $rows = is_array($preview['rows']) ? $preview['rows'] : [];
+            $valid_rows = is_array($preview['valid_rows'] ?? null) ? $preview['valid_rows'] : [];
+            $duplicates = is_array($preview['duplicates'] ?? null) ? $preview['duplicates'] : [];
+
+            echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
+            echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d.', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
+            echo '<table class="widefat"><thead><tr><th>#</th><th>Data</th><th>Importo</th><th>Tipo</th><th>Descrizione</th><th>Esito</th></tr></thead><tbody>';
+            foreach ($rows as $i => $row) {
+                $is_dupe = in_array($i, $duplicates, true);
+                $errors = is_array($row['errors'] ?? null) ? $row['errors'] : [];
+                $status = [];
+                if ($errors) {
+                    $status[] = implode(' ', $errors);
+                }
+                if ($is_dupe) {
+                    $status[] = __('Possibile duplicato', 'terzo-conto');
+                }
+                if (! $status) {
+                    $status[] = __('Valida', 'terzo-conto');
+                }
+
+                echo '<tr>';
+                echo '<td>' . esc_html((string) ($row['row_number'] ?? ($i + 1))) . '</td>';
+                echo '<td>' . esc_html((string) ($row['data_movimento'] ?? '')) . '</td>';
+                echo '<td>' . esc_html(number_format((float) ($row['importo'] ?? 0), 2, ',', '.')) . '</td>';
+                echo '<td>' . esc_html((string) ($row['tipo'] ?? '')) . '</td>';
+                echo '<td>' . esc_html((string) ($row['descrizione'] ?? '')) . '</td>';
+                echo '<td>' . esc_html(implode(' | ', $status)) . '</td>';
+                echo '</tr>';
             }
             echo '</tbody></table>';
+
+            echo '<h3>' . esc_html__('Importa righe valide', 'terzo-conto') . '</h3>';
+            echo '<form method="post">';
+            wp_nonce_field('terzoconto_action_nonce');
+            echo '<input type="hidden" name="terzoconto_action" value="import_commit" />';
+            echo '<p><label for="import_categoria_associazione_id">' . esc_html__('Categoria da assegnare', 'terzo-conto') . '</label><br /><select name="categoria_associazione_id" id="import_categoria_associazione_id" required>';
+            echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
+            foreach ($categorie as $categoria) {
+                echo '<option value="' . esc_attr((string) $categoria['id']) . '"' . selected($selected_categoria, (int) $categoria['id'], false) . '>' . esc_html($categoria['nome']) . '</option>';
+            }
+            echo '</select></p>';
+            echo '<p><label for="import_conto_id">' . esc_html__('Conto da assegnare', 'terzo-conto') . '</label><br /><select name="conto_id" id="import_conto_id" required>';
+            echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
+            foreach ($conti as $conto) {
+                echo '<option value="' . esc_attr((string) $conto['id']) . '"' . selected($selected_conto, (int) $conto['id'], false) . '>' . esc_html($conto['nome']) . '</option>';
+            }
+            echo '</select></p>';
+            submit_button(__('Importa righe valide', 'terzo-conto'), 'primary', 'submit', false, empty($valid_rows) ? ['disabled' => 'disabled'] : []);
+            echo '</form>';
         }
         echo '</div>';
     }
@@ -524,18 +576,90 @@ class TerzoConto_Admin {
     }
 
     private function handle_import_preview(): void {
+        delete_transient($this->get_import_preview_transient_key());
+
         if (! isset($_FILES['csv_file']) || empty($_FILES['csv_file']['tmp_name'])) {
+            add_settings_error('terzoconto', 'import_missing_file', __('Seleziona un file CSV da caricare.', 'terzo-conto'), 'error');
             return;
         }
 
         $provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? 'generico'));
         $rows = $this->import_service->parse_csv($_FILES['csv_file']['tmp_name'], $provider);
+
+        if ($rows === []) {
+            add_settings_error('terzoconto', 'import_empty_csv', __('Il file CSV è vuoto o non leggibile.', 'terzo-conto'), 'error');
+            return;
+        }
+
+        $valid_rows = $this->import_service->get_valid_rows($rows);
         $duplicates = $this->import_service->detect_duplicates($rows, $this->movimenti->get_all());
 
-        set_transient('terzoconto_import_preview_' . get_current_user_id(), [
+        set_transient($this->get_import_preview_transient_key(), [
             'rows' => $rows,
+            'valid_rows' => $valid_rows,
             'duplicates' => $duplicates,
+            'provider' => $provider,
+            'categoria_associazione_id' => absint($_POST['categoria_associazione_id'] ?? 0),
+            'conto_id' => absint($_POST['conto_id'] ?? 0),
         ], MINUTE_IN_SECONDS * 30);
+
+        add_settings_error('terzoconto', 'import_preview_ready', __('Anteprima import generata.', 'terzo-conto'), 'updated');
+    }
+
+    private function handle_import_commit(): void {
+        $preview = get_transient($this->get_import_preview_transient_key());
+        if (! is_array($preview)) {
+            add_settings_error('terzoconto', 'import_missing_preview', __('Genera prima un’anteprima valida del CSV.', 'terzo-conto'), 'error');
+            return;
+        }
+
+        $categoria_id = absint($_POST['categoria_associazione_id'] ?? 0);
+        $conto_id = absint($_POST['conto_id'] ?? 0);
+
+        if ($categoria_id <= 0) {
+            add_settings_error('terzoconto', 'import_categoria_missing', __('Seleziona una categoria valida per l’import.', 'terzo-conto'), 'error');
+            return;
+        }
+
+        if ($conto_id <= 0) {
+            add_settings_error('terzoconto', 'import_conto_missing', __('Seleziona un conto valido per l’import.', 'terzo-conto'), 'error');
+            return;
+        }
+
+        $valid_rows = is_array($preview['valid_rows'] ?? null) ? $preview['valid_rows'] : [];
+        if ($valid_rows === []) {
+            add_settings_error('terzoconto', 'import_no_valid_rows', __('Non ci sono righe valide da importare.', 'terzo-conto'), 'error');
+            return;
+        }
+
+        $imported = 0;
+        foreach ($valid_rows as $row) {
+            $created = $this->movimenti->create([
+                'data_movimento' => $row['data_movimento'],
+                'importo' => (float) $row['importo'],
+                'tipo' => $row['tipo'],
+                'categoria_associazione_id' => $categoria_id,
+                'conto_id' => $conto_id,
+                'raccolta_fondi_id' => 0,
+                'anagrafica_id' => 0,
+                'descrizione' => $row['descrizione'],
+            ]);
+
+            if ($created) {
+                $imported++;
+            }
+        }
+
+        set_transient($this->get_import_preview_transient_key(), array_merge($preview, [
+            'categoria_associazione_id' => $categoria_id,
+            'conto_id' => $conto_id,
+        ]), MINUTE_IN_SECONDS * 30);
+
+        add_settings_error('terzoconto', 'import_commit_done', sprintf(__('Import completato: %d righe salvate.', 'terzo-conto'), $imported), 'updated');
+    }
+
+    private function get_import_preview_transient_key(): string {
+        return 'terzoconto_import_preview_' . get_current_user_id();
     }
 
     private function download_csv(): void {
