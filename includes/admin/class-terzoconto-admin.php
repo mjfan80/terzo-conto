@@ -605,6 +605,9 @@ class TerzoConto_Admin {
         ], MINUTE_IN_SECONDS * 30);
 
         add_settings_error('terzoconto', 'import_preview_ready', __('Anteprima import generata.', 'terzo-conto'), 'updated');
+
+        wp_redirect(admin_url('admin.php?page=terzoconto-import'));
+        exit;
     }
 
     private function handle_import_commit(): void {
