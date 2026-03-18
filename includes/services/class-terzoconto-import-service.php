@@ -65,7 +65,13 @@ class TerzoConto_Import_Service {
                 continue;
             }
 
-            $rows[] = $this->build_generic_preview_row($data, $has_tipo, count($rows) + 1);
+            $row_data = array_slice(array_pad($data, count($normalized_header), ''), 0, count($normalized_header));
+            $row = array_combine($normalized_header, $row_data);
+            if (! is_array($row)) {
+                $row = [];
+            }
+
+            $rows[] = $this->build_generic_preview_row($row, $has_tipo, count($rows) + 1, count($data));
         }
 
         fclose($handle);
@@ -110,12 +116,13 @@ class TerzoConto_Import_Service {
         return $rows;
     }
 
-    private function build_generic_preview_row(array $columns, bool $has_tipo, int $row_number): array {
+    private function build_generic_preview_row(array $columns, bool $has_tipo, int $row_number, ?int $actual_columns = null): array {
         $errors = [];
         $expected_columns = $has_tipo ? 4 : 3;
         $columns = array_map(static fn($value): string => trim((string) $value), $columns);
+        $actual_columns = $actual_columns ?? count($columns);
 
-        if (count($columns) !== $expected_columns) {
+        if ($actual_columns !== $expected_columns) {
             $errors[] = sprintf(
                 /* translators: %d: expected columns count */
                 __('Numero colonne non valido. Attese %d colonne.', 'terzo-conto'),
@@ -123,10 +130,10 @@ class TerzoConto_Import_Service {
             );
         }
 
-        $data_value = $columns[0] ?? '';
-        $importo_value = $columns[1] ?? '';
-        $descrizione_value = $columns[2] ?? '';
-        $tipo_value = $has_tipo ? ($columns[3] ?? '') : '';
+        $data_value = $columns['data'] ?? '';
+        $importo_value = $columns['importo'] ?? '';
+        $descrizione_value = $columns['descrizione'] ?? '';
+        $tipo_value = $has_tipo ? ($columns['tipo'] ?? '') : '';
 
         $parsed_date = $this->parse_date_value($data_value);
         if ($parsed_date === null) {
@@ -221,7 +228,10 @@ class TerzoConto_Import_Service {
             return null;
         }
 
-        $normalized = str_replace(' ', '', $value);
+        $normalized = preg_replace('/[^0-9,.-]/', '', $value);
+        if (! is_string($normalized) || $normalized == '') {
+            return null;
+        }
 
         if (strpos($normalized, ',') !== false && strpos($normalized, '.') !== false) {
             if (strrpos($normalized, ',') > strrpos($normalized, '.')) {
