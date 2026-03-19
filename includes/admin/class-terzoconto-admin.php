@@ -259,8 +259,20 @@ class TerzoConto_Admin {
 			echo '<h2>Anteprima</h2>';
 			echo '<p>Righe valide: ' . count($valid_rows) . ' su ' . count($rows) . '</p>';
 
+			echo '<form method="post">';
+			wp_nonce_field('terzoconto_action_nonce');
+			echo '<input type="hidden" name="terzoconto_action" value="import_commit" />';
+
 			echo '<table class="widefat"><thead>
-			<tr><th>#</th><th>Data</th><th>Importo</th><th>Tipo</th><th>Descrizione</th><th>Esito</th></tr>
+			<tr>
+			<th>#</th>
+			<th>Data</th>
+			<th>Importo</th>
+			<th>Tipo</th>
+			<th>Descrizione</th>
+			<th>Categoria</th>
+			<th>Esito</th>
+			</tr>
 			</thead><tbody>';
 
 			foreach ($rows as $i => $row) {
@@ -268,22 +280,76 @@ class TerzoConto_Admin {
 				$is_dupe = in_array($i, $duplicates, true);
 				$errors = $row['errors'] ?? [];
 
+				echo '<tr>';
+
+				echo '<td>' . ($i + 1) . '</td>';
+
+				echo '<td><input type="date" name="rows['.$i.'][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
+
+				echo '<td><input type="text" name="rows['.$i.'][importo]" value="' . esc_attr($row['importo']) . '"></td>';
+
+				echo '<td>
+					<select name="rows['.$i.'][tipo]">
+						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>Entrata</option>
+						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>Uscita</option>
+					</select>
+				</td>';
+
+				echo '<td><input type="text" name="rows['.$i.'][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
+
+				echo '<td><select name="rows['.$i.'][categoria_id]" required>';
+				echo '<option value="">-- categoria --</option>';
+
+				$grouped_categories = [];
+
+				foreach ($categorie as $cat) {
+
+					$group_label = $this->get_categoria_optgroup_label(
+						(string) ($cat['modello_d_tipo'] ?? ''),
+						(string) ($cat['modello_d_area'] ?? '')
+					);
+
+					if (! isset($grouped_categories[$group_label])) {
+						$grouped_categories[$group_label] = [];
+					}
+
+					$grouped_categories[$group_label][] = $cat;
+				}
+
+				foreach ($grouped_categories as $group_label => $group_categories) {
+
+					echo '<optgroup label="' . esc_attr($group_label) . '">';
+
+					foreach ($group_categories as $cat) {
+
+						$category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
+						$category_label = $category_code !== '' 
+							? $category_code . ' - ' . $cat['nome'] 
+							: $cat['nome'];
+
+						echo '<option value="' . esc_attr($cat['id']) . '">' . esc_html($category_label) . '</option>';
+					}
+
+					echo '</optgroup>';
+				}
+
+				echo '</select></td>';
+
 				$status = [];
 				if ($errors) $status[] = implode(' ', $errors);
 				if ($is_dupe) $status[] = 'Duplicato';
 				if (! $status) $status[] = 'OK';
 
-				echo '<tr>';
-				echo '<td>' . ($row['row_number'] ?? ($i + 1)) . '</td>';
-				echo '<td>' . ($row['data_movimento'] ?? '') . '</td>';
-				echo '<td>' . number_format($row['importo'] ?? 0, 2, ',', '.') . '</td>';
-				echo '<td>' . ($row['tipo'] ?? '') . '</td>';
-				echo '<td>' . ($row['descrizione'] ?? '') . '</td>';
 				echo '<td>' . implode(' | ', $status) . '</td>';
+
 				echo '</tr>';
 			}
 
 			echo '</tbody></table>';
+
+			submit_button('Importa tutto');
+
+			echo '</form>';
 
 			echo '<h3>Importa righe valide</h3>';
 
@@ -566,53 +632,44 @@ exit;
 	}
 
     private function handle_import_commit(): void {
-		//$preview = get_transient($this->get_import_preview_transient_key());
-		//$preview = get_option('terzoconto_import_preview');
-		$preview = $this->submitted_movimento;
 
-		if (! is_array($preview)) {
-			add_settings_error('terzoconto', 'import_missing_preview', 'Genera prima un’anteprima valida del CSV.', 'error');
+		if (! current_user_can('manage_options')) {
 			return;
 		}
 
-		$categoria_id = absint($_POST['categoria_associazione_id'] ?? 0);
-		$conto_id = absint($_POST['conto_id'] ?? 0);
+		check_admin_referer('terzoconto_action_nonce');
 
-		if ($categoria_id <= 0 || $conto_id <= 0) {
-			add_settings_error('terzoconto', 'import_missing_data', 'Categoria e conto obbligatori.', 'error');
-			return;
-		}
+		$rows = $_POST['rows'] ?? [];
 
-		$valid_rows = is_array($preview['valid_rows'] ?? null) ? $preview['valid_rows'] : [];
-
-		if ($valid_rows === []) {
-			add_settings_error('terzoconto', 'import_no_valid_rows', 'Nessuna riga valida.', 'error');
+		if (empty($rows)) {
+			add_settings_error('terzoconto', 'import_no_data', 'Nessun dato da importare', 'error');
 			return;
 		}
 
 		$imported = 0;
 
-		foreach ($valid_rows as $row) {
-			$created = $this->movimenti->create([
-				'data_movimento' => $row['data_movimento'],
-				'importo' => (float) $row['importo'],
-				'tipo' => $row['tipo'],
-				'categoria_associazione_id' => $categoria_id,
-				'conto_id' => $conto_id,
+		foreach ($rows as $row) {
+
+			// salta righe senza categoria
+			if (empty($row['categoria_id'])) {
+				continue;
+			}
+
+			$this->movimenti->create([
+				'data_movimento' => sanitize_text_field($row['data_movimento']),
+				'importo' => (float) str_replace(',', '.', $row['importo']),
+				'tipo' => sanitize_text_field($row['tipo']),
+				'categoria_associazione_id' => (int) $row['categoria_id'],
+				'conto_id' => 1, // temporaneo
 				'raccolta_fondi_id' => 0,
 				'anagrafica_id' => 0,
-				'descrizione' => $row['descrizione'],
+				'descrizione' => sanitize_text_field($row['descrizione']),
 			]);
 
-			if ($created) {
-				$imported++;
-			}
+			$imported++;
 		}
 
-		//delete_transient($this->get_import_preview_transient_key());
-		delete_option('terzoconto_import_preview');
-
-		add_settings_error('terzoconto', 'import_commit_done', "Import completato: $imported righe.", 'updated');
+		add_settings_error('terzoconto', 'import_done', "Import completato: $imported movimenti", 'updated');
 	}
 
     private function get_import_preview_transient_key(): string {
