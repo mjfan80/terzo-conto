@@ -271,6 +271,7 @@ class TerzoConto_Admin {
 			<th>Tipo</th>
 			<th>Descrizione</th>
 			<th>Categoria</th>
+			<th>Conto</th>
 			<th>Esito</th>
 			</tr>
 			</thead><tbody>';
@@ -331,6 +332,15 @@ class TerzoConto_Admin {
 					}
 
 					echo '</optgroup>';
+				}
+
+				echo '</select></td>';
+				
+				echo '<td><select name="rows['.$i.'][conto_id]" required>';
+				echo '<option value="">-- conto --</option>';
+
+				foreach ($conti as $conto) {
+					echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
 				}
 
 				echo '</select></td>';
@@ -660,7 +670,7 @@ exit;
 				'importo' => (float) str_replace(',', '.', $row['importo']),
 				'tipo' => sanitize_text_field($row['tipo']),
 				'categoria_associazione_id' => (int) $row['categoria_id'],
-				'conto_id' => 1, // temporaneo
+				'conto_id' => (int) $row['conto_id'],
 				'raccolta_fondi_id' => 0,
 				'anagrafica_id' => 0,
 				'descrizione' => sanitize_text_field($row['descrizione']),
