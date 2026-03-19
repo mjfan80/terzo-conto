@@ -284,6 +284,30 @@ class TerzoConto_Admin {
 			}
 
 			echo '</tbody></table>';
+
+			echo '<h3>Importa righe valide</h3>';
+
+			echo '<form method="post">';
+			wp_nonce_field('terzoconto_action_nonce');
+			echo '<input type="hidden" name="terzoconto_action" value="import_commit" />';
+			
+			echo '<p><select name="categoria_associazione_id" required>';
+			echo '<option value="0">Seleziona categoria</option>';
+			foreach ($categorie as $categoria) {
+			    echo '<option value="' . esc_attr($categoria['id']) . '">' . esc_html($categoria['nome']) . '</option>';
+			}
+			echo '</select></p>';
+			
+			echo '<p><select name="conto_id" required>';
+			echo '<option value="0">Seleziona conto</option>';
+			foreach ($conti as $conto) {
+			    echo '<option value="' . esc_attr($conto['id']) . '">' . esc_html($conto['nome']) . '</option>';
+			}
+			echo '</select></p>';
+			
+			submit_button('Importa righe valide');
+			
+			echo '</form>';
 		}
 
 		echo '</div>';
@@ -543,7 +567,8 @@ exit;
 
     private function handle_import_commit(): void {
 		//$preview = get_transient($this->get_import_preview_transient_key());
-		$preview = get_option('terzoconto_import_preview');
+		//$preview = get_option('terzoconto_import_preview');
+		$preview = $this->submitted_movimento;
 
 		if (! is_array($preview)) {
 			add_settings_error('terzoconto', 'import_missing_preview', 'Genera prima un’anteprima valida del CSV.', 'error');
