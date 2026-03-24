@@ -144,7 +144,7 @@ class TerzoConto_Import_Service {
             );
         }
 
-        $data_value = $columns['data'] ?? '';
+        $data_value = $columns['data'] ?? $columns['data_movimento'] ?? '';
         $importo_value = $columns['importo'] ?? '';
         $descrizione_value = $columns['descrizione'] ?? '';
         $tipo_value = $has_tipo ? ($columns['tipo'] ?? '') : '';
