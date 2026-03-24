@@ -82,37 +82,51 @@ class TerzoConto_Import_Service {
     private function parse_provider_csv(string $file_path, string $provider): array {
         $rows = [];
         $handle = $this->open_csv_file($file_path);
-
+    
         if (! is_resource($handle)) {
             return $rows;
         }
-
+    
         $header = fgetcsv($handle, 0, ',');
         if (! $header) {
             fclose($handle);
             return $rows;
         }
-
+    
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
             $row = array_combine($header, $data);
             if (! is_array($row)) {
                 continue;
             }
-
+    
             $normalized = $this->normalize_row($row, $provider);
+    
+            // 👉 NORMALIZZAZIONE IMPORTO + TIPO
+            $raw_importo = (float) ($normalized['importo'] ?? 0);
+    
+            // tipo coerente con segno SOLO se non già impostato correttamente
+            $tipo = (string) ($normalized['tipo'] ?? '');
+    
+            if ($tipo === '') {
+                $tipo = $raw_importo < 0 ? 'uscita' : 'entrata';
+            }
+    
+            // 👉 IMPORTO SEMPRE POSITIVO
+            $importo = abs($raw_importo);
+    
             $rows[] = [
                 'row_number' => count($rows) + 1,
                 'source_format' => 'provider',
                 'data_movimento' => (string) ($normalized['data_movimento'] ?? ''),
-                'importo' => (float) ($normalized['importo'] ?? 0),
-                'tipo' => (string) ($normalized['tipo'] ?? 'entrata'),
+                'importo' => $importo,
+                'tipo' => $tipo,
                 'descrizione' => (string) ($normalized['descrizione'] ?? ''),
                 'errors' => [],
             ];
         }
-
+    
         fclose($handle);
-
+    
         return $rows;
     }
 
