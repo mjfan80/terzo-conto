@@ -241,12 +241,34 @@ class TerzoConto_Import_Service {
         if ($value === '') {
             return null;
         }
-
+    
+        // Rileva negatività (prima di perdere info)
+        $is_negative = false;
+    
+        // parentesi contabili (es: (123,45))
+        if (preg_match('/^\(.*\)$/', $value)) {
+            $is_negative = true;
+            $value = trim($value, '()');
+        }
+    
+        // unicode minus / dash
+        if (preg_match('/[−–]/u', $value)) {
+            $is_negative = true;
+            $value = preg_replace('/[−–]/u', '-', $value);
+        }
+    
+        // meno classico
+        if (strpos($value, '-') !== false) {
+            $is_negative = true;
+        }
+    
+        // 2. pulizia
         $normalized = preg_replace('/[^0-9,.-]/', '', $value);
-        if (! is_string($normalized) || $normalized == '') {
+        if (! is_string($normalized) || $normalized === '') {
             return null;
         }
-
+    
+        // 3. normalizzazione separatori
         if (strpos($normalized, ',') !== false && strpos($normalized, '.') !== false) {
             if (strrpos($normalized, ',') > strrpos($normalized, '.')) {
                 $normalized = str_replace('.', '', $normalized);
@@ -257,12 +279,15 @@ class TerzoConto_Import_Service {
         } else {
             $normalized = str_replace(',', '.', $normalized);
         }
-
+    
         if (! is_numeric($normalized)) {
             return null;
         }
-
-        return (float) $normalized;
+    
+        $amount = (float) $normalized;
+    
+        // 4. applica segno corretto
+        return $is_negative ? -abs($amount) : $amount;
     }
 
     private function parse_date_value(string $value): ?string {
