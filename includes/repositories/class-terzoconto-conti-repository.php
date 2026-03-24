@@ -6,10 +6,12 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Conti_Repository {
     private string $table;
+    private string $movimenti_table;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'terzoconto_conti';
+        $this->movimenti_table = $wpdb->prefix . 'terzoconto_movimenti';
     }
 
     public function get_all(): array {
@@ -49,6 +51,34 @@ class TerzoConto_Conti_Repository {
             ],
             ['id' => $id],
             ['%s', '%s', '%d', '%d'],
+            ['%d']
+        );
+    }
+
+    public function count_movimenti(int $conto_id): int {
+        global $wpdb;
+        return (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->movimenti_table} WHERE conto_id = %d",
+                $conto_id
+            )
+        );
+    }
+
+    public function can_delete(int $conto_id): bool {
+        return $this->count_movimenti($conto_id) === 0;
+    }
+
+    public function delete(int $id): bool {
+        global $wpdb;
+
+        if (! $this->can_delete($id)) {
+            return false;
+        }
+
+        return false !== $wpdb->delete(
+            $this->table,
+            ['id' => $id],
             ['%d']
         );
     }
