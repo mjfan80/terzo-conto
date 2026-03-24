@@ -298,43 +298,12 @@ class TerzoConto_Admin {
 
 				echo '<td><input type="text" name="rows['.$i.'][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
-				echo '<td><select name="rows['.$i.'][categoria_id]" required>';
-				echo '<option value="">-- categoria --</option>';
-
-				$grouped_categories = [];
-
-				foreach ($categorie as $cat) {
-
-					$group_label = $this->get_categoria_optgroup_label(
-						(string) ($cat['modello_d_tipo'] ?? ''),
-						(string) ($cat['modello_d_area'] ?? '')
-					);
-
-					if (! isset($grouped_categories[$group_label])) {
-						$grouped_categories[$group_label] = [];
-					}
-
-					$grouped_categories[$group_label][] = $cat;
-				}
-
-				foreach ($grouped_categories as $group_label => $group_categories) {
-
-					echo '<optgroup label="' . esc_attr($group_label) . '">';
-
-					foreach ($group_categories as $cat) {
-
-						$category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
-						$category_label = $category_code !== '' 
-							? $category_code . ' - ' . $cat['nome'] 
-							: $cat['nome'];
-
-						echo '<option value="' . esc_attr($cat['id']) . '">' . esc_html($category_label) . '</option>';
-					}
-
-					echo '</optgroup>';
-				}
-
-				echo '</select></td>';
+				echo '<td>' . $this->render_categoria_select_html(
+				    $categorie,
+				    'rows['.$i.'][categoria_id]',
+				    0,
+				    true
+				) . '</td>';
 				
 				echo '<td><select name="rows['.$i.'][conto_id]" required>';
 				echo '<option value="">-- conto --</option>';
@@ -414,87 +383,82 @@ class TerzoConto_Admin {
     }
 
     private function render_movimento_form(array $categorie, array $conti, array $raccolte, array $anagrafiche, ?array $movimento = null): void {
-        $is_edit = is_array($movimento);
-        $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
-        $selected_anagrafica_label = '';
-
-        foreach ($anagrafiche as $anagrafica) {
-            if ((int) ($anagrafica['id'] ?? 0) === $selected_anagrafica) {
-                $selected_anagrafica_label = $this->format_anagrafica_label($anagrafica);
-                break;
-            }
-        }
-
-        echo '<form method="post">';
-        wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_movimento' : 'add_movimento') . '" />';
-        if ($is_edit) {
-            echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
-        }
-
-        echo '<div class="terzoconto-movimento-grid">';
-        echo '<p><label for="data_movimento">' . esc_html__('Data movimento', 'terzo-conto') . '</label><br /><input type="date" id="data_movimento" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
-        echo '<p><label for="importo">' . esc_html__('Importo', 'terzo-conto') . '</label><br /><input type="text" id="importo" name="importo" inputmode="decimal" required placeholder="' . esc_attr__('Es. 125,00', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
-        $tipo = $movimento['tipo'] ?? 'entrata';
-        echo '<p><label for="tipo">' . esc_html__('Tipo movimento', 'terzo-conto') . '</label><br /><select name="tipo" id="tipo"><option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option><option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option></select></p>';
-
-        echo '<p><label for="categoria_associazione_id">' . esc_html__('Categoria', 'terzo-conto') . '</label><br /><select name="categoria_associazione_id" id="categoria_associazione_id" required>';
-        echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
-        $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
-        $grouped_categories = [];
-
-        foreach ($categorie as $cat) {
-            $group_label = $this->get_categoria_optgroup_label(
-                (string) ($cat['modello_d_tipo'] ?? ''),
-                (string) ($cat['modello_d_area'] ?? '')
-            );
-
-            if (! isset($grouped_categories[$group_label])) {
-                $grouped_categories[$group_label] = [];
-            }
-
-            $grouped_categories[$group_label][] = $cat;
-        }
-
-        foreach ($grouped_categories as $group_label => $group_categories) {
-            echo '<optgroup label="' . esc_attr($group_label) . '">';
-
-            foreach ($group_categories as $cat) {
-                $category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
-                $category_label = $category_code !== '' ? $category_code . ' - ' . $cat['nome'] : $cat['nome'];
-                echo '<option value="' . esc_attr((string) $cat['id']) . '"' . selected($selected_categoria, (int) $cat['id'], false) . '>' . esc_html($category_label) . '</option>';
-            }
-
-            echo '</optgroup>';
-        }
-        echo '</select></p>';
-
-        echo '<p><label for="conto_id">' . esc_html__('Conto', 'terzo-conto') . '</label><br /><select name="conto_id" id="conto_id" required>';
-        echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
-        $selected_conto = (int) ($movimento['conto_id'] ?? 0);
-        foreach ($conti as $conto) {
-            echo '<option value="' . esc_attr((string) $conto['id']) . '"' . selected($selected_conto, (int) $conto['id'], false) . '>' . esc_html($conto['nome']) . '</option>';
-        }
-        echo '</select></p>';
-
-        echo '<p><label for="raccolta_fondi_id">' . esc_html__('Raccolta fondi', 'terzo-conto') . '</label><br /><select name="raccolta_fondi_id" id="raccolta_fondi_id"><option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
-        $selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
-        foreach ($raccolte as $raccolta) {
-            echo '<option value="' . esc_attr((string) $raccolta['id']) . '"' . selected($selected_raccolta, (int) $raccolta['id'], false) . '>' . esc_html($raccolta['nome']) . '</option>';
-        }
-        echo '</select></p>';
-
-        echo '<p class="terzoconto-anagrafica-search"><label for="terzoconto-anagrafica-search">' . esc_html__('Soggetto / Pagatore', 'terzo-conto') . '</label><br />';
-        echo '<input type="text" id="terzoconto-anagrafica-search" placeholder="' . esc_attr__('Cerca anagrafica per nome o codice fiscale', 'terzo-conto') . '" value="' . esc_attr($selected_anagrafica_label) . '" autocomplete="off" />';
-        echo '<input type="hidden" name="anagrafica_id" id="anagrafica_id" value="' . esc_attr((string) $selected_anagrafica) . '" />';
-        echo '<span class="terzoconto-field-help">' . esc_html__('Digita almeno 2 caratteri per cercare un’anagrafica esistente.', 'terzo-conto') . '</span>';
-        echo '<div id="terzoconto-anagrafica-results" class="terzoconto-ajax-results"></div></p>';
-
-        echo '<p style="grid-column:1/-1;"><label for="descrizione">' . esc_html__('Descrizione', 'terzo-conto') . '</label><br /><input type="text" class="large-text" id="descrizione" name="descrizione" placeholder="' . esc_attr__('Es. Donazione campagna primavera', 'terzo-conto') . '" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
-        echo '</div>';
-        submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
-        echo '</form><hr />';
-    }
+	    $is_edit = is_array($movimento);
+	    $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
+	    $selected_anagrafica_label = '';
+	
+	    foreach ($anagrafiche as $anagrafica) {
+	        if ((int) ($anagrafica['id'] ?? 0) === $selected_anagrafica) {
+	            $selected_anagrafica_label = $this->format_anagrafica_label($anagrafica);
+	            break;
+	        }
+	    }
+	
+	    echo '<form method="post">';
+	    wp_nonce_field('terzoconto_action_nonce');
+	    echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_movimento' : 'add_movimento') . '" />';
+	    if ($is_edit) {
+	        echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
+	    }
+	
+	    echo '<div class="terzoconto-movimento-grid">';
+	
+	    echo '<p><label>Data movimento</label><br />
+	        <input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
+	
+	    echo '<p><label>Importo</label><br />
+	        <input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
+	
+	    $tipo = $movimento['tipo'] ?? 'entrata';
+	    echo '<p><label>Tipo</label><br />
+	        <select name="tipo">
+	            <option value="entrata"' . selected($tipo, 'entrata', false) . '>Entrata</option>
+	            <option value="uscita"' . selected($tipo, 'uscita', false) . '>Uscita</option>
+	        </select></p>';
+	
+	    // 👉 CATEGORIA (REFATTORED)
+	    $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
+	
+	    echo '<p><label>Categoria</label><br />';
+	    echo $this->render_categoria_select_html(
+	        $categorie,
+	        'categoria_associazione_id',
+	        $selected_categoria,
+	        true
+	    );
+	    echo '</p>';
+	
+	    // 👉 CONTO (lasciato com’è)
+	    $selected_conto = (int) ($movimento['conto_id'] ?? 0);
+	
+	    echo '<p><label>Conto</label><br /><select name="conto_id" required>';
+	    echo '<option value="0">Seleziona conto</option>';
+	    foreach ($conti as $conto) {
+	        echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
+	            . esc_html($conto['nome']) .
+	        '</option>';
+	    }
+	    echo '</select></p>';
+	
+	    echo '<p><label>Raccolta fondi</label><br /><select name="raccolta_fondi_id">';
+	    echo '<option value="0">Nessuna raccolta</option>';
+	    $selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
+	    foreach ($raccolte as $raccolta) {
+	        echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
+	            . esc_html($raccolta['nome']) .
+	        '</option>';
+	    }
+	    echo '</select></p>';
+	
+	    echo '<p><label>Descrizione</label><br />
+	        <input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+	
+	    echo '</div>';
+	
+	    submit_button($is_edit ? 'Aggiorna movimento' : 'Aggiungi movimento');
+	
+	    echo '</form><hr />';
+	}
 
     private function get_categoria_optgroup_label(string $tipo, string $area): string {
         $type_labels = [
@@ -515,6 +479,52 @@ class TerzoConto_Admin {
 
         return sprintf('%s - %s (%s)', $type_label, $area_label, $area !== '' ? $area : '-');
     }
+
+	private function render_categoria_select_html(array $categorie, string $name, int $selected = 0, bool $required = false): string {
+
+	    $html = '<select name="'.esc_attr($name).'" '.($required ? 'required' : '').'>';
+	
+	    $html .= '<option value="">-- categoria --</option>';
+	
+	    $grouped_categories = [];
+	
+	    foreach ($categorie as $cat) {
+	
+	        $group_label = $this->get_categoria_optgroup_label(
+	            (string) ($cat['modello_d_tipo'] ?? ''),
+	            (string) ($cat['modello_d_area'] ?? '')
+	        );
+	
+	        if (!isset($grouped_categories[$group_label])) {
+	            $grouped_categories[$group_label] = [];
+	        }
+	
+	        $grouped_categories[$group_label][] = $cat;
+	    }
+	
+	    foreach ($grouped_categories as $group_label => $group_categories) {
+	
+	        $html .= '<optgroup label="'.esc_attr($group_label).'">';
+	
+	        foreach ($group_categories as $cat) {
+	
+	            $category_code = trim((string) (($cat['modello_d_tipo'] ?? '') . ($cat['modello_d_codice'] ?? '')));
+	            $category_label = $category_code !== '' 
+	                ? $category_code . ' - ' . $cat['nome'] 
+	                : $cat['nome'];
+	
+	            $html .= '<option value="'.esc_attr($cat['id']).'" '.selected($selected, (int)$cat['id'], false).'>'
+	                .esc_html($category_label).
+	            '</option>';
+	        }
+	
+	        $html .= '</optgroup>';
+	    }
+	
+	    $html .= '</select>';
+	
+	    return $html;
+	}
 
     private function render_movimenti_filters(string $stato_filter): void {
         echo '<form method="get" class="terzoconto-filter-form">';
@@ -620,10 +630,7 @@ class TerzoConto_Admin {
 		$provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? 'generico'));
 
 		$rows = $this->import_service->parse_csv($_FILES['csv_file']['tmp_name'], $provider);
-echo '<pre>';
-var_dump($rows);
-echo '</pre>';
-exit;
+
 		if ($rows === []) {
 			add_settings_error('terzoconto', 'import_empty', 'CSV vuoto', 'error');
 			return;
