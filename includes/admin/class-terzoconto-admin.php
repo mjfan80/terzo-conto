@@ -686,6 +686,8 @@ class TerzoConto_Admin {
 			$imported++;
 		}
 
+		delete_transient($this->get_import_preview_transient_key());
+
 		add_settings_error('terzoconto', 'import_done', "Import completato: $imported movimenti", 'updated');
 	}
 
