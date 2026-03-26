@@ -53,6 +53,7 @@ class TerzoConto_Activator {
             data_inizio DATE NOT NULL,
             data_fine DATE NULL,
             stato VARCHAR(20) NOT NULL DEFAULT 'aperta',
+            relazione_illustrativa TEXT NULL,
             PRIMARY KEY (id)
         ) {$charset_collate};";
 

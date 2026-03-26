@@ -9,6 +9,7 @@ require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-movimenti-
 class TerzoConto_Admin {
     private ?array $submitted_movimento = null;
     private ?array $submitted_conto = null;
+    private ?array $submitted_raccolta = null;
 
     public function __construct(
         private TerzoConto_Movimenti_Repository $movimenti,
@@ -46,7 +47,7 @@ class TerzoConto_Admin {
 		check_admin_referer('terzoconto_action_nonce');
 		$action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
 
-		switch ($action) {
+        switch ($action) {
             case 'add_conto':
                 $this->handle_create_conto();
                 break;
@@ -57,6 +58,18 @@ class TerzoConto_Admin {
 
             case 'delete_conto':
                 $this->handle_delete_conto();
+                break;
+
+            case 'add_raccolta':
+                $this->handle_create_raccolta();
+                break;
+
+            case 'update_raccolta':
+                $this->handle_update_raccolta();
+                break;
+
+            case 'delete_raccolta':
+                $this->handle_delete_raccolta();
                 break;
 
 			case 'import_preview':
@@ -306,21 +319,128 @@ class TerzoConto_Admin {
     }
 
     public function render_raccolte(): void {
+        $edit_id = absint($_GET['edit_raccolta_id'] ?? 0);
+        $raccolta = $edit_id > 0 ? $this->raccolte->find_by_id($edit_id) : null;
+        if (is_array($this->submitted_raccolta)) {
+            $raccolta = $this->submitted_raccolta;
+        }
+
+        $is_edit = is_array($raccolta);
         $raccolte = $this->raccolte->get_all();
+
         echo '<div class="wrap"><h1>' . esc_html__('Raccolte fondi', 'terzo-conto') . '</h1>';
+        echo '<style>
+            .terzoconto-raccolte-form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+                max-width: 1000px;
+                margin-bottom: 12px;
+            }
+            .terzoconto-raccolte-form-grid input[type="text"],
+            .terzoconto-raccolte-form-grid input[type="date"],
+            .terzoconto-raccolte-form-grid select,
+            .terzoconto-raccolte-form-grid textarea {
+                width: 100%;
+            }
+            .terzoconto-raccolte-help {
+                max-width: 980px;
+                margin: 8px 0 14px;
+            }
+            .terzoconto-raccolte-status-badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.8;
+            }
+            .terzoconto-raccolte-status-badge.is-open {
+                background: #e6f6eb;
+                color: #176a32;
+            }
+            .terzoconto-raccolte-status-badge.is-closed {
+                background: #f0f0f1;
+                color: #50575e;
+            }
+        </style>';
+        $this->render_raccolte_notice();
+        settings_errors('terzoconto_raccolte');
+
+        echo '<h2>' . esc_html($is_edit ? __('Modifica raccolta fondi', 'terzo-conto') : __('Nuova raccolta fondi', 'terzo-conto')) . '</h2>';
+        echo '<p class="terzoconto-raccolte-help">' . esc_html__('Compila i dati della raccolta fondi occasionale. La relazione illustrativa verrà utilizzata per i report ufficiali RUNTS.', 'terzo-conto') . '</p>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="add_raccolta" />';
-        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome', 'terzo-conto') . '" /></p>';
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" /></p>';
-        echo '<p><input type="date" name="data_inizio" required /> <input type="date" name="data_fine" /></p>';
-        echo '<p><select name="stato"><option value="aperta">' . esc_html__('Aperta', 'terzo-conto') . '</option><option value="chiusa">' . esc_html__('Chiusa', 'terzo-conto') . '</option></select></p>';
-        submit_button(__('Aggiungi raccolta', 'terzo-conto'));
-        echo '</form><hr /><ul>';
-        foreach ($raccolte as $raccolta) {
-            echo '<li>' . esc_html($raccolta['nome'] . ' (' . $raccolta['stato'] . ')') . '</li>';
+        echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_raccolta' : 'add_raccolta') . '" />';
+        if ($is_edit) {
+            echo '<input type="hidden" name="id" value="' . esc_attr((string) $raccolta['id']) . '" />';
         }
-        echo '</ul></div>';
+        echo '<div class="terzoconto-raccolte-form-grid">';
+        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome', 'terzo-conto') . '" value="' . esc_attr((string) ($raccolta['nome'] ?? '')) . '" /></p>';
+        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($raccolta['descrizione'] ?? '')) . '" /></p>';
+        echo '<p><input type="date" name="data_inizio" required value="' . esc_attr((string) ($raccolta['data_inizio'] ?? '')) . '" /></p>';
+        echo '<p><input type="date" name="data_fine" value="' . esc_attr((string) ($raccolta['data_fine'] ?? '')) . '" /></p>';
+        echo '<p><select name="stato">';
+        echo '<option value="aperta" ' . selected((string) ($raccolta['stato'] ?? 'aperta'), 'aperta', false) . '>' . esc_html__('Aperta', 'terzo-conto') . '</option>';
+        echo '<option value="chiusa" ' . selected((string) ($raccolta['stato'] ?? ''), 'chiusa', false) . '>' . esc_html__('Chiusa', 'terzo-conto') . '</option>';
+        echo '</select></p>';
+        echo '<p style="grid-column:1 / -1;"><label for="tc-relazione-illustrativa">' . esc_html__('Relazione illustrativa (per report RUNTS)', 'terzo-conto') . '</label><br />';
+        echo '<textarea id="tc-relazione-illustrativa" name="relazione_illustrativa" rows="8" placeholder="' . esc_attr__('Descrizione narrativa della raccolta fondi', 'terzo-conto') . '">' . esc_textarea((string) ($raccolta['relazione_illustrativa'] ?? '')) . '</textarea>';
+        echo '<small style="display:block;margin-top:4px;color:#646970;">' . esc_html__('Inserire una descrizione della raccolta fondi (contesto, modalità, finalità e utilizzo dei fondi). Questo testo sarà utilizzato nei report ufficiali.', 'terzo-conto') . '</small></p>';
+        echo '</div>';
+        submit_button($is_edit ? __('Aggiorna raccolta', 'terzo-conto') : __('Aggiungi raccolta', 'terzo-conto'));
+        echo '</form><hr />';
+
+        echo '<h2>' . esc_html__('Elenco raccolte fondi', 'terzo-conto') . '</h2>';
+        echo '<table class="widefat fixed striped">';
+        echo '<thead><tr>';
+        echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Stato', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Periodo', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Azioni', 'terzo-conto') . '</th>';
+        echo '</tr></thead><tbody>';
+
+        if ($raccolte === []) {
+            echo '<tr><td colspan="4">' . esc_html__('Nessuna raccolta presente.', 'terzo-conto') . '</td></tr>';
+        }
+
+        foreach ($raccolte as $raccolta) {
+            $edit_url = add_query_arg(['page' => 'terzoconto-raccolte', 'edit_raccolta_id' => (int) $raccolta['id']], admin_url('admin.php'));
+            $is_open = (string) ($raccolta['stato'] ?? '') === 'aperta';
+            $status_label = $is_open ? __('Aperta', 'terzo-conto') : __('Chiusa', 'terzo-conto');
+            $status_class = $is_open ? 'is-open' : 'is-closed';
+            $cannot_delete = ! $this->raccolte->can_delete((int) $raccolta['id']);
+            $data_inizio = (string) ($raccolta['data_inizio'] ?? '');
+            $data_fine = (string) ($raccolta['data_fine'] ?? '');
+            $periodo = $data_inizio !== '' ? $data_inizio : '—';
+            if ($data_fine !== '') {
+                $periodo .= ' → ' . $data_fine;
+            }
+
+            echo '<tr>';
+            echo '<td><a href="' . esc_url($edit_url) . '">' . esc_html((string) $raccolta['nome']) . '</a></td>';
+            echo '<td><span class="terzoconto-raccolte-status-badge ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span></td>';
+            echo '<td>' . esc_html($periodo) . '</td>';
+            echo '<td>';
+            echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzo-conto') . '</a> ';
+            echo '<form method="post" style="display:inline-block;margin-left:6px;">';
+            wp_nonce_field('terzoconto_action_nonce');
+            echo '<input type="hidden" name="terzoconto_action" value="delete_raccolta" />';
+            echo '<input type="hidden" name="id" value="' . esc_attr((string) $raccolta['id']) . '" />';
+            if ($cannot_delete) {
+                echo '<button type="submit" class="button button-link-delete" disabled="disabled" title="' . esc_attr__('La raccolta è associata a movimenti e non può essere eliminata.', 'terzo-conto') . '">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
+            } else {
+                echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero eliminare questa raccolta?', 'terzo-conto')) . '\');">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
+            }
+            echo '</form>';
+            if ($cannot_delete) {
+                echo '<br /><small>' . esc_html__('Non eliminabile: raccolta associata a movimenti.', 'terzo-conto') . '</small>';
+            }
+            echo '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+        echo '</div>';
     }
 
     public function render_import(): void {
@@ -872,6 +992,108 @@ class TerzoConto_Admin {
             echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare il conto: è associato a uno o più movimenti.', 'terzo-conto') . '</p></div>';
         } elseif ($status === 'error') {
             echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sui conti non riuscita.', 'terzo-conto') . '</p></div>';
+        }
+    }
+
+    private function handle_create_raccolta(): void {
+        $data = $this->sanitize_raccolta_data($_POST);
+        $this->submitted_raccolta = $data;
+
+        if (! $this->validate_raccolta_data($data)) {
+            return;
+        }
+
+        $created = $this->raccolte->create($data);
+        $status = $created ? 'created' : 'error';
+        wp_safe_redirect(add_query_arg('tc_raccolta_status', $status, admin_url('admin.php?page=terzoconto-raccolte')));
+        exit;
+    }
+
+    private function handle_update_raccolta(): void {
+        $id = absint($_POST['id'] ?? 0);
+        $data = $this->sanitize_raccolta_data($_POST);
+        if ($id > 0) {
+            $data['id'] = $id;
+        }
+        $this->submitted_raccolta = $data;
+
+        if ($id <= 0 || ! $this->validate_raccolta_data($data)) {
+            return;
+        }
+
+        $updated = $this->raccolte->update($id, $data);
+        $status = $updated ? 'updated' : 'error';
+        wp_safe_redirect(add_query_arg('tc_raccolta_status', $status, admin_url('admin.php?page=terzoconto-raccolte')));
+        exit;
+    }
+
+    private function handle_delete_raccolta(): void {
+        $id = absint($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            wp_safe_redirect(add_query_arg('tc_raccolta_status', 'error', admin_url('admin.php?page=terzoconto-raccolte')));
+            exit;
+        }
+
+        if (! $this->raccolte->can_delete($id)) {
+            wp_safe_redirect(add_query_arg('tc_raccolta_status', 'cannot_delete', admin_url('admin.php?page=terzoconto-raccolte')));
+            exit;
+        }
+
+        $deleted = $this->raccolte->delete($id);
+        $status = $deleted ? 'deleted' : 'error';
+        wp_safe_redirect(add_query_arg('tc_raccolta_status', $status, admin_url('admin.php?page=terzoconto-raccolte')));
+        exit;
+    }
+
+    private function sanitize_raccolta_data(array $source): array {
+        return [
+            'nome' => sanitize_text_field(wp_unslash($source['nome'] ?? '')),
+            'descrizione' => sanitize_text_field(wp_unslash($source['descrizione'] ?? '')),
+            'data_inizio' => sanitize_text_field(wp_unslash($source['data_inizio'] ?? '')),
+            'data_fine' => sanitize_text_field(wp_unslash($source['data_fine'] ?? '')),
+            'stato' => sanitize_text_field(wp_unslash($source['stato'] ?? 'aperta')),
+            'relazione_illustrativa' => sanitize_textarea_field(wp_unslash($source['relazione_illustrativa'] ?? '')),
+        ];
+    }
+
+    private function validate_raccolta_data(array $data): bool {
+        if ($data['nome'] === '') {
+            add_settings_error('terzoconto_raccolte', 'raccolta_nome', __('Il nome raccolta è obbligatorio.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        if ($data['data_inizio'] === '') {
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio', __('La data di inizio è obbligatoria.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        $allowed_status = ['aperta', 'chiusa'];
+        if (! in_array($data['stato'], $allowed_status, true)) {
+            add_settings_error('terzoconto_raccolte', 'raccolta_stato', __('Lo stato selezionato non è valido.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        if ($data['data_fine'] !== '' && $data['data_fine'] < $data['data_inizio']) {
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine', __('La data di fine deve essere uguale o successiva alla data di inizio.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    private function render_raccolte_notice(): void {
+        $status = sanitize_text_field(wp_unslash($_GET['tc_raccolta_status'] ?? ''));
+
+        if ($status === 'created') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta creata con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'updated') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta aggiornata con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'deleted') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta eliminata con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'cannot_delete') {
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare la raccolta: è associata a uno o più movimenti.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'error') {
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sulle raccolte non riuscita.', 'terzo-conto') . '</p></div>';
         }
     }
 
