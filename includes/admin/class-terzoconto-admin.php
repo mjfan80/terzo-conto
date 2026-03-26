@@ -5,11 +5,18 @@ if (! defined('ABSPATH')) {
 }
 
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-movimenti-list-table.php';
+require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin-security.php';
+require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin-validator.php';
+require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin-conti-page.php';
 
 class TerzoConto_Admin {
     private ?array $submitted_movimento = null;
     private ?array $submitted_conto = null;
     private ?array $submitted_raccolta = null;
+
+    private TerzoConto_Admin_Security $security;
+    private TerzoConto_Admin_Validator $validator;
+    private TerzoConto_Admin_Conti_Page $conti_page;
 
     public function __construct(
         private TerzoConto_Movimenti_Repository $movimenti,
@@ -18,8 +25,14 @@ class TerzoConto_Admin {
         private TerzoConto_Raccolte_Repository $raccolte,
         private TerzoConto_Anagrafiche_Repository $anagrafiche,
         private TerzoConto_Import_Service $import_service,
-        private TerzoConto_Report_Service $report_service
+        private TerzoConto_Report_Service $report_service,
+        ?TerzoConto_Admin_Security $security = null,
+        ?TerzoConto_Admin_Validator $validator = null,
+        ?TerzoConto_Admin_Conti_Page $conti_page = null
     ) {
+        $this->security = $security ?? new TerzoConto_Admin_Security();
+        $this->validator = $validator ?? new TerzoConto_Admin_Validator();
+        $this->conti_page = $conti_page ?? new TerzoConto_Admin_Conti_Page();
     }
 
     public function hooks(): void {
@@ -40,11 +53,13 @@ class TerzoConto_Admin {
     }
 
     public function handle_post_actions(): void {
-		if (! current_user_can('manage_options') || ! isset($_POST['terzoconto_action'])) {
+		if (! isset($_POST['terzoconto_action'])) {
 			return;
 		}
 
-		check_admin_referer('terzoconto_action_nonce');
+		if (! $this->security->assert_manage_capability() || ! $this->security->verify_action_nonce()) {
+			return;
+		}
 		$action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
 
         switch ($action) {
@@ -105,10 +120,18 @@ class TerzoConto_Admin {
 			case 'import_commit':
 				$this->handle_import_commit();
 				break;
+
+            case 'export_movimenti_csv':
+                $this->download_csv();
+                break;
 		}
 	}
 
     public function render_movimenti(): void {
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
         $stato_filter = $this->get_movimento_stato_filter();
         $movimenti = $this->movimenti->get_all();
         $categorie = $this->categorie->get_associazione();
@@ -174,6 +197,10 @@ class TerzoConto_Admin {
     }
 
     public function render_categorie(): void {
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
         $modello_d = $this->categorie->get_modello_d();
         $categorie = $this->categorie->get_associazione();
 
@@ -198,127 +225,28 @@ class TerzoConto_Admin {
     }
 
     public function render_conti(): void {
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
         $edit_id = absint($_GET['edit_conto_id'] ?? 0);
         $conto = $edit_id > 0 ? $this->conti->find_by_id($edit_id) : null;
         if (is_array($this->submitted_conto)) {
             $conto = $this->submitted_conto;
         }
 
-        $is_edit = is_array($conto);
-        $conti = $this->conti->get_all();
-
-        echo '<div class="wrap"><h1>' . esc_html__('Conti', 'terzo-conto') . '</h1>';
-        echo '<style>
-            .terzoconto-conti-form-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-                gap: 12px;
-                max-width: 900px;
-                margin-bottom: 12px;
-            }
-            .terzoconto-conti-form-grid input[type="text"] {
-                width: 100%;
-            }
-            .terzoconto-conti-check-row {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 16px;
-                margin: 8px 0 0;
-            }
-            .terzoconto-conti-help {
-                max-width: 980px;
-                margin: 8px 0 14px;
-            }
-            .terzoconto-conti-status-badge {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 999px;
-                font-size: 12px;
-                font-weight: 600;
-                line-height: 1.8;
-            }
-            .terzoconto-conti-status-badge.is-active {
-                background: #e6f6eb;
-                color: #176a32;
-            }
-            .terzoconto-conti-status-badge.is-inactive {
-                background: #f0f0f1;
-                color: #50575e;
-            }
-        </style>';
-        $this->render_conti_notice();
-        settings_errors('terzoconto_conti');
-
-        echo '<h2>' . esc_html($is_edit ? __('Modifica conto', 'terzo-conto') : __('Nuovo conto', 'terzo-conto')) . '</h2>';
-        echo '<p class="terzoconto-conti-help">' . esc_html__("Un conto rappresenta il metodo o lo strumento con cui viene gestito il denaro dell’associazione (es. contanti, conto corrente, PayPal, Satispay). Serve per tracciare entrate e uscite. I conti possono essere tracciabili (bonifico, PayPal, ecc.) o non tracciabili (contanti).", 'terzo-conto') . '</p>';
-        echo '<form method="post">';
-        wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_conto' : 'add_conto') . '" />';
-        if ($is_edit) {
-            echo '<input type="hidden" name="id" value="' . esc_attr((string) $conto['id']) . '" />';
-        }
-        echo '<div class="terzoconto-conti-form-grid">';
-        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome conto', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['nome'] ?? '')) . '" /></p>';
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['descrizione'] ?? '')) . '" /></p>';
-        echo '</div>';
-        echo '<div class="terzoconto-conti-check-row">';
-        echo '<label title="' . esc_attr__('Indica se il metodo di pagamento consente la tracciabilità fiscale (es. bonifico, carta, PayPal). Necessario per le erogazioni liberali detraibili.', 'terzo-conto') . '"><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label>';
-        echo '<label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label>';
-        echo '</div>';
-        submit_button($is_edit ? __('Aggiorna conto', 'terzo-conto') : __('Aggiungi conto', 'terzo-conto'));
-        echo '</form><hr />';
-
-        echo '<h2>' . esc_html__('Elenco conti', 'terzo-conto') . '</h2>';
-        echo '<table class="widefat fixed striped">';
-        echo '<thead><tr>';
-        echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Descrizione', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Stato', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Tracciabile', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Azioni', 'terzo-conto') . '</th>';
-        echo '</tr></thead><tbody>';
-
-        if ($conti === []) {
-            echo '<tr><td colspan="5">' . esc_html__('Nessun conto presente.', 'terzo-conto') . '</td></tr>';
-        }
-
-        foreach ($conti as $row) {
-            $edit_url = add_query_arg(['page' => 'terzoconto-conti', 'edit_conto_id' => (int) $row['id']], admin_url('admin.php'));
-            $is_attivo = ! empty($row['attivo']);
-            $status_label = $is_attivo ? __('Attivo', 'terzo-conto') : __('Disattivo', 'terzo-conto');
-            $status_class = $is_attivo ? 'is-active' : 'is-inactive';
-            $tracciabile_label = ! empty($row['tracciabile']) ? __('Sì', 'terzo-conto') : __('No', 'terzo-conto');
-
-            $cannot_delete = ! $this->conti->can_delete((int) $row['id']);
-
-            echo '<tr>';
-            echo '<td><a href="' . esc_url($edit_url) . '">' . esc_html($row['nome']) . '</a></td>';
-            echo '<td>' . esc_html((string) ($row['descrizione'] ?? '')) . '</td>';
-            echo '<td><span class="terzoconto-conti-status-badge ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span></td>';
-            echo '<td>' . esc_html($tracciabile_label) . '</td>';
-            echo '<td>';
-            echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzo-conto') . '</a> ';
-            echo '<form method="post" style="display:inline-block;margin-left:6px;">';
-            wp_nonce_field('terzoconto_action_nonce');
-            echo '<input type="hidden" name="terzoconto_action" value="delete_conto" />';
-            echo '<input type="hidden" name="id" value="' . esc_attr((string) $row['id']) . '" />';
-            if ($cannot_delete) {
-                echo '<button type="submit" class="button button-link-delete" disabled="disabled" title="' . esc_attr__('Il conto è associato a movimenti e non può essere eliminato.', 'terzo-conto') . '">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
-            } else {
-                echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero eliminare questo conto?', 'terzo-conto')) . '\');">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
-            }
-            echo '</form>';
-            if ($cannot_delete) {
-                echo '<br /><small>' . esc_html__('Non eliminabile: conto associato a movimenti.', 'terzo-conto') . '</small>';
-            }
-            echo '</td>';
-            echo '</tr>';
-        }
-        echo '</tbody></table>';
-        echo '</div>';
+        $this->conti_page->render($this, [
+            'is_edit' => is_array($conto),
+            'conto' => $conto,
+            'conti' => $this->conti->get_all(),
+        ]);
     }
 
     public function render_raccolte(): void {
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
         $edit_id = absint($_GET['edit_raccolta_id'] ?? 0);
         $raccolta = $edit_id > 0 ? $this->raccolte->find_by_id($edit_id) : null;
         if (is_array($this->submitted_raccolta)) {
@@ -444,6 +372,10 @@ class TerzoConto_Admin {
     }
 
     public function render_import(): void {
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
 
 		$preview = $this->submitted_movimento;
 
@@ -575,10 +507,17 @@ class TerzoConto_Admin {
 	}
 
     public function render_report(): void {
-        $year = isset($_GET['year']) ? absint($_GET['year']) : (int) gmdate('Y');
+        if (! $this->security->assert_manage_capability()) {
+            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+        }
+
+        $nonce = sanitize_text_field(wp_unslash($_GET['terzoconto_report_filter_nonce'] ?? ''));
+        $has_valid_nonce = $this->security->verify_get_nonce($nonce, 'terzoconto_report_filter_nonce');
+        $year = (isset($_GET['year']) && $has_valid_nonce) ? absint($_GET['year']) : (int) gmdate('Y');
         $report = $this->report_service->get_bilancio_annuale($year);
         echo '<div class="wrap"><h1>' . esc_html__('Report', 'terzo-conto') . '</h1>';
         echo '<form method="get"><input type="hidden" name="page" value="terzoconto-report" />';
+        wp_nonce_field('terzoconto_report_filter_nonce', 'terzoconto_report_filter_nonce');
         echo '<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" />';
         submit_button(__('Carica report', 'terzo-conto'), '', '', false);
         echo '</form>';
@@ -745,6 +684,7 @@ class TerzoConto_Admin {
     private function render_movimenti_filters(string $stato_filter): void {
         echo '<form method="get" class="terzoconto-filter-form">';
         echo '<input type="hidden" name="page" value="terzoconto" />';
+        wp_nonce_field('terzoconto_filter_nonce', 'terzoconto_filter_nonce');
         echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzo-conto') . '</label>';
         echo '<select name="stato_movimento" id="stato_movimento">';
         echo '<option value="">' . esc_html__('Tutti gli stati', 'terzo-conto') . '</option>';
@@ -781,7 +721,7 @@ class TerzoConto_Admin {
             $is_valid = false;
         }
 
-        if ($data['importo'] <= 0) {
+        if (! $this->validator->is_valid_money((float) $data['importo'])) {
             add_settings_error('terzoconto', 'movimento_importo', __('Inserisci un importo maggiore di zero.', 'terzo-conto'), 'error');
             $is_valid = false;
         }
@@ -818,11 +758,15 @@ class TerzoConto_Admin {
     }
 
     private function is_valid_date(string $value): bool {
-        $date = DateTimeImmutable::createFromFormat('Y-m-d', $value);
-        return $date instanceof DateTimeImmutable && $date->format('Y-m-d') === $value;
+        return $this->validator->is_valid_date($value);
     }
 
     private function get_movimento_stato_filter(): string {
+        $nonce = sanitize_text_field(wp_unslash($_GET['terzoconto_filter_nonce'] ?? ''));
+        if (! $this->security->verify_get_nonce($nonce, 'terzoconto_filter_nonce')) {
+            return '';
+        }
+
         $stato = sanitize_text_field(wp_unslash($_GET['stato_movimento'] ?? ''));
         return in_array($stato, ['attivo', 'annullato'], true) ? $stato : '';
     }
@@ -865,12 +809,14 @@ class TerzoConto_Admin {
 	}
 
     private function handle_import_commit(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
 
 		if (! current_user_can('manage_options')) {
 			return;
 		}
-
-		check_admin_referer('terzoconto_action_nonce');
 
 		$rows = $_POST['rows'] ?? [];
 
@@ -888,15 +834,34 @@ class TerzoConto_Admin {
 				continue;
 			}
 
+            $data_movimento = sanitize_text_field(wp_unslash($row['data_movimento'] ?? ''));
+            $importo = (float) str_replace(',', '.', (string) wp_unslash($row['importo'] ?? '0'));
+            $tipo = sanitize_text_field(wp_unslash($row['tipo'] ?? ''));
+            $categoria_id = (int) ($row['categoria_id'] ?? 0);
+            $conto_id = (int) ($row['conto_id'] ?? 0);
+            $descrizione = sanitize_text_field(wp_unslash($row['descrizione'] ?? ''));
+
+            if (! $this->validator->is_valid_date($data_movimento)) {
+                continue;
+            }
+
+            if (! $this->validator->is_valid_money($importo)) {
+                continue;
+            }
+
+            if (! in_array($tipo, ['entrata', 'uscita'], true) || $categoria_id <= 0 || $conto_id <= 0) {
+                continue;
+            }
+
 			$this->movimenti->create([
-				'data_movimento' => sanitize_text_field($row['data_movimento']),
-				'importo' => (float) str_replace(',', '.', $row['importo']),
-				'tipo' => sanitize_text_field($row['tipo']),
-				'categoria_associazione_id' => (int) $row['categoria_id'],
-				'conto_id' => (int) $row['conto_id'],
+				'data_movimento' => $data_movimento,
+				'importo' => $importo,
+				'tipo' => $tipo,
+				'categoria_associazione_id' => $categoria_id,
+				'conto_id' => $conto_id,
 				'raccolta_fondi_id' => 0,
 				'anagrafica_id' => 0,
-				'descrizione' => sanitize_text_field($row['descrizione']),
+				'descrizione' => $descrizione,
 			]);
 
 			$imported++;
@@ -912,6 +877,10 @@ class TerzoConto_Admin {
 	}
 
     private function handle_create_conto(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $data = $this->sanitize_conto_data($_POST);
         $this->submitted_conto = $data;
 
@@ -926,6 +895,10 @@ class TerzoConto_Admin {
     }
 
     private function handle_update_conto(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $id = absint($_POST['id'] ?? 0);
         $data = $this->sanitize_conto_data($_POST);
         if ($id > 0) {
@@ -944,6 +917,10 @@ class TerzoConto_Admin {
     }
 
     private function handle_delete_conto(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $id = absint($_POST['id'] ?? 0);
         if ($id <= 0) {
             wp_safe_redirect(add_query_arg('tc_conto_status', 'error', admin_url('admin.php?page=terzoconto-conti')));
@@ -976,10 +953,20 @@ class TerzoConto_Admin {
             return false;
         }
 
+        if (! $this->validator->is_valid_conto_name($data['nome'])) {
+            add_settings_error('terzoconto_conti', 'conto_nome_length', __('Il nome conto deve contenere tra 2 e 120 caratteri.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        if (! $this->validator->is_valid_short_text($data['descrizione'])) {
+            add_settings_error('terzoconto_conti', 'conto_descrizione_length', __('La descrizione conto può contenere al massimo 255 caratteri.', 'terzo-conto'), 'error');
+            return false;
+        }
+
         return true;
     }
 
-    private function render_conti_notice(): void {
+    public function render_conti_notice(): void {
         $status = sanitize_text_field(wp_unslash($_GET['tc_conto_status'] ?? ''));
 
         if ($status === 'created') {
@@ -995,7 +982,15 @@ class TerzoConto_Admin {
         }
     }
 
+    public function get_conti_repository(): TerzoConto_Conti_Repository {
+        return $this->conti;
+    }
+
     private function handle_create_raccolta(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $data = $this->sanitize_raccolta_data($_POST);
         $this->submitted_raccolta = $data;
 
@@ -1010,6 +1005,10 @@ class TerzoConto_Admin {
     }
 
     private function handle_update_raccolta(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $id = absint($_POST['id'] ?? 0);
         $data = $this->sanitize_raccolta_data($_POST);
         if ($id > 0) {
@@ -1028,6 +1027,10 @@ class TerzoConto_Admin {
     }
 
     private function handle_delete_raccolta(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $id = absint($_POST['id'] ?? 0);
         if ($id <= 0) {
             wp_safe_redirect(add_query_arg('tc_raccolta_status', 'error', admin_url('admin.php?page=terzoconto-raccolte')));
@@ -1067,9 +1070,20 @@ class TerzoConto_Admin {
             return false;
         }
 
+
+        if (! $this->validator->is_valid_date($data['data_inizio'])) {
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio_format', __('La data di inizio non è valida.', 'terzo-conto'), 'error');
+            return false;
+        }
+
         $allowed_status = ['aperta', 'chiusa'];
         if (! in_array($data['stato'], $allowed_status, true)) {
             add_settings_error('terzoconto_raccolte', 'raccolta_stato', __('Lo stato selezionato non è valido.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        if ($data['data_fine'] !== '' && ! $this->validator->is_valid_date($data['data_fine'])) {
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine_format', __('La data di fine non è valida.', 'terzo-conto'), 'error');
             return false;
         }
 
@@ -1098,7 +1112,18 @@ class TerzoConto_Admin {
     }
 
     private function download_csv(): void {
+        if (! $this->security->assert_manage_capability()) {
+            return;
+        }
+
         $movimenti = $this->movimenti->get_all();
+        foreach ($movimenti as &$movimento) {
+            foreach (['id', 'data_movimento', 'importo', 'tipo', 'descrizione', 'stato'] as $field) {
+                $movimento[$field] = $this->validator->sanitize_csv_cell((string) ($movimento[$field] ?? ''));
+            }
+        }
+        unset($movimento);
+
         $csv = $this->report_service->export_csv_movimenti($movimenti);
         nocache_headers();
         header('Content-Type: text/csv; charset=utf-8');
