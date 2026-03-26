@@ -195,20 +195,63 @@ class TerzoConto_Admin {
         $conti = $this->conti->get_all();
 
         echo '<div class="wrap"><h1>' . esc_html__('Conti', 'terzo-conto') . '</h1>';
+        echo '<style>
+            .terzoconto-conti-form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+                max-width: 900px;
+                margin-bottom: 12px;
+            }
+            .terzoconto-conti-form-grid input[type="text"] {
+                width: 100%;
+            }
+            .terzoconto-conti-check-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                margin: 8px 0 0;
+            }
+            .terzoconto-conti-help {
+                max-width: 980px;
+                margin: 8px 0 14px;
+            }
+            .terzoconto-conti-status-badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.8;
+            }
+            .terzoconto-conti-status-badge.is-active {
+                background: #e6f6eb;
+                color: #176a32;
+            }
+            .terzoconto-conti-status-badge.is-inactive {
+                background: #f0f0f1;
+                color: #50575e;
+            }
+        </style>';
         $this->render_conti_notice();
         settings_errors('terzoconto_conti');
 
         echo '<h2>' . esc_html($is_edit ? __('Modifica conto', 'terzo-conto') : __('Nuovo conto', 'terzo-conto')) . '</h2>';
+        echo '<p class="terzoconto-conti-help">' . esc_html__("Un conto rappresenta il metodo o lo strumento con cui viene gestito il denaro dell’associazione (es. contanti, conto corrente, PayPal, Satispay). Serve per tracciare entrate e uscite. I conti possono essere tracciabili (bonifico, PayPal, ecc.) o non tracciabili (contanti).", 'terzo-conto') . '</p>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
         echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_conto' : 'add_conto') . '" />';
         if ($is_edit) {
             echo '<input type="hidden" name="id" value="' . esc_attr((string) $conto['id']) . '" />';
         }
+        echo '<div class="terzoconto-conti-form-grid">';
         echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome conto', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['nome'] ?? '')) . '" /></p>';
         echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['descrizione'] ?? '')) . '" /></p>';
-        echo '<p><label><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label></p>';
-        echo '<p><label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label></p>';
+        echo '</div>';
+        echo '<div class="terzoconto-conti-check-row">';
+        echo '<label title="' . esc_attr__('Indica se il metodo di pagamento consente la tracciabilità fiscale (es. bonifico, carta, PayPal). Necessario per le erogazioni liberali detraibili.', 'terzo-conto') . '"><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label>';
+        echo '<label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label>';
+        echo '</div>';
         submit_button($is_edit ? __('Aggiorna conto', 'terzo-conto') : __('Aggiungi conto', 'terzo-conto'));
         echo '</form><hr />';
 
@@ -218,32 +261,28 @@ class TerzoConto_Admin {
         echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
         echo '<th>' . esc_html__('Descrizione', 'terzo-conto') . '</th>';
         echo '<th>' . esc_html__('Stato', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Tracciabile', 'terzo-conto') . '</th>';
         echo '<th>' . esc_html__('Azioni', 'terzo-conto') . '</th>';
         echo '</tr></thead><tbody>';
 
         if ($conti === []) {
-            echo '<tr><td colspan="4">' . esc_html__('Nessun conto presente.', 'terzo-conto') . '</td></tr>';
+            echo '<tr><td colspan="5">' . esc_html__('Nessun conto presente.', 'terzo-conto') . '</td></tr>';
         }
 
         foreach ($conti as $row) {
             $edit_url = add_query_arg(['page' => 'terzoconto-conti', 'edit_conto_id' => (int) $row['id']], admin_url('admin.php'));
-            $meta = [];
-            if (! empty($row['tracciabile'])) {
-                $meta[] = __('tracciabile', 'terzo-conto');
-            }
-            if (empty($row['attivo'])) {
-                $meta[] = __('non attivo', 'terzo-conto');
-            }
-            if ($meta === []) {
-                $meta[] = __('attivo', 'terzo-conto');
-            }
+            $is_attivo = ! empty($row['attivo']);
+            $status_label = $is_attivo ? __('Attivo', 'terzo-conto') : __('Disattivo', 'terzo-conto');
+            $status_class = $is_attivo ? 'is-active' : 'is-inactive';
+            $tracciabile_label = ! empty($row['tracciabile']) ? __('Sì', 'terzo-conto') : __('No', 'terzo-conto');
 
             $cannot_delete = ! $this->conti->can_delete((int) $row['id']);
 
             echo '<tr>';
             echo '<td><a href="' . esc_url($edit_url) . '">' . esc_html($row['nome']) . '</a></td>';
             echo '<td>' . esc_html((string) ($row['descrizione'] ?? '')) . '</td>';
-            echo '<td>' . esc_html(implode(', ', $meta)) . '</td>';
+            echo '<td><span class="terzoconto-conti-status-badge ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span></td>';
+            echo '<td>' . esc_html($tracciabile_label) . '</td>';
             echo '<td>';
             echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzo-conto') . '</a> ';
             echo '<form method="post" style="display:inline-block;margin-left:6px;">';
