@@ -8,6 +8,7 @@ require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-movimenti-
 
 class TerzoConto_Admin {
     private ?array $submitted_movimento = null;
+    private ?array $submitted_conto = null;
 
     public function __construct(
         private TerzoConto_Movimenti_Repository $movimenti,
@@ -46,6 +47,17 @@ class TerzoConto_Admin {
 		$action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
 
 		switch ($action) {
+            case 'add_conto':
+                $this->handle_create_conto();
+                break;
+
+            case 'update_conto':
+                $this->handle_update_conto();
+                break;
+
+            case 'delete_conto':
+                $this->handle_delete_conto();
+                break;
 
 			case 'import_preview':
 
@@ -173,40 +185,124 @@ class TerzoConto_Admin {
     }
 
     public function render_conti(): void {
-        $conti = $this->conti->get_all();
         $edit_id = absint($_GET['edit_conto_id'] ?? 0);
         $conto = $edit_id > 0 ? $this->conti->find_by_id($edit_id) : null;
+        if (is_array($this->submitted_conto)) {
+            $conto = $this->submitted_conto;
+        }
+
         $is_edit = is_array($conto);
+        $conti = $this->conti->get_all();
 
         echo '<div class="wrap"><h1>' . esc_html__('Conti', 'terzo-conto') . '</h1>';
+        echo '<style>
+            .terzoconto-conti-form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+                max-width: 900px;
+                margin-bottom: 12px;
+            }
+            .terzoconto-conti-form-grid input[type="text"] {
+                width: 100%;
+            }
+            .terzoconto-conti-check-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                margin: 8px 0 0;
+            }
+            .terzoconto-conti-help {
+                max-width: 980px;
+                margin: 8px 0 14px;
+            }
+            .terzoconto-conti-status-badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.8;
+            }
+            .terzoconto-conti-status-badge.is-active {
+                background: #e6f6eb;
+                color: #176a32;
+            }
+            .terzoconto-conti-status-badge.is-inactive {
+                background: #f0f0f1;
+                color: #50575e;
+            }
+        </style>';
+        $this->render_conti_notice();
+        settings_errors('terzoconto_conti');
+
+        echo '<h2>' . esc_html($is_edit ? __('Modifica conto', 'terzo-conto') : __('Nuovo conto', 'terzo-conto')) . '</h2>';
+        echo '<p class="terzoconto-conti-help">' . esc_html__("Un conto rappresenta il metodo o lo strumento con cui viene gestito il denaro dell’associazione (es. contanti, conto corrente, PayPal, Satispay). Serve per tracciare entrate e uscite. I conti possono essere tracciabili (bonifico, PayPal, ecc.) o non tracciabili (contanti).", 'terzo-conto') . '</p>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
         echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_conto' : 'add_conto') . '" />';
         if ($is_edit) {
             echo '<input type="hidden" name="id" value="' . esc_attr((string) $conto['id']) . '" />';
         }
+        echo '<div class="terzoconto-conti-form-grid">';
         echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome conto', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['nome'] ?? '')) . '" /></p>';
         echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($conto['descrizione'] ?? '')) . '" /></p>';
-        echo '<p><label><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label></p>';
-        echo '<p><label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label></p>';
+        echo '</div>';
+        echo '<div class="terzoconto-conti-check-row">';
+        echo '<label title="' . esc_attr__('Indica se il metodo di pagamento consente la tracciabilità fiscale (es. bonifico, carta, PayPal). Necessario per le erogazioni liberali detraibili.', 'terzo-conto') . '"><input type="checkbox" name="tracciabile" value="1" ' . checked((int) ($conto['tracciabile'] ?? 0), 1, false) . ' /> ' . esc_html__('Tracciabile', 'terzo-conto') . '</label>';
+        echo '<label><input type="checkbox" name="attivo" value="1" ' . checked((int) ($conto['attivo'] ?? 1), 1, false) . ' /> ' . esc_html__('Attivo', 'terzo-conto') . '</label>';
+        echo '</div>';
         submit_button($is_edit ? __('Aggiorna conto', 'terzo-conto') : __('Aggiungi conto', 'terzo-conto'));
-        echo '</form><hr /><ul>';
+        echo '</form><hr />';
+
+        echo '<h2>' . esc_html__('Elenco conti', 'terzo-conto') . '</h2>';
+        echo '<table class="widefat fixed striped">';
+        echo '<thead><tr>';
+        echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Descrizione', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Stato', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Tracciabile', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Azioni', 'terzo-conto') . '</th>';
+        echo '</tr></thead><tbody>';
+
+        if ($conti === []) {
+            echo '<tr><td colspan="5">' . esc_html__('Nessun conto presente.', 'terzo-conto') . '</td></tr>';
+        }
+
         foreach ($conti as $row) {
             $edit_url = add_query_arg(['page' => 'terzoconto-conti', 'edit_conto_id' => (int) $row['id']], admin_url('admin.php'));
-            $meta = [];
-            if (! empty($row['tracciabile'])) {
-                $meta[] = __('tracciabile', 'terzo-conto');
+            $is_attivo = ! empty($row['attivo']);
+            $status_label = $is_attivo ? __('Attivo', 'terzo-conto') : __('Disattivo', 'terzo-conto');
+            $status_class = $is_attivo ? 'is-active' : 'is-inactive';
+            $tracciabile_label = ! empty($row['tracciabile']) ? __('Sì', 'terzo-conto') : __('No', 'terzo-conto');
+
+            $cannot_delete = ! $this->conti->can_delete((int) $row['id']);
+
+            echo '<tr>';
+            echo '<td><a href="' . esc_url($edit_url) . '">' . esc_html($row['nome']) . '</a></td>';
+            echo '<td>' . esc_html((string) ($row['descrizione'] ?? '')) . '</td>';
+            echo '<td><span class="terzoconto-conti-status-badge ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span></td>';
+            echo '<td>' . esc_html($tracciabile_label) . '</td>';
+            echo '<td>';
+            echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzo-conto') . '</a> ';
+            echo '<form method="post" style="display:inline-block;margin-left:6px;">';
+            wp_nonce_field('terzoconto_action_nonce');
+            echo '<input type="hidden" name="terzoconto_action" value="delete_conto" />';
+            echo '<input type="hidden" name="id" value="' . esc_attr((string) $row['id']) . '" />';
+            if ($cannot_delete) {
+                echo '<button type="submit" class="button button-link-delete" disabled="disabled" title="' . esc_attr__('Il conto è associato a movimenti e non può essere eliminato.', 'terzo-conto') . '">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
+            } else {
+                echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero eliminare questo conto?', 'terzo-conto')) . '\');">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
             }
-            if (empty($row['attivo'])) {
-                $meta[] = __('non attivo', 'terzo-conto');
+            echo '</form>';
+            if ($cannot_delete) {
+                echo '<br /><small>' . esc_html__('Non eliminabile: conto associato a movimenti.', 'terzo-conto') . '</small>';
             }
-            echo '<li><a href="' . esc_url($edit_url) . '">' . esc_html($row['nome']) . '</a>';
-            if ($meta) {
-                echo ' - ' . esc_html(implode(', ', $meta));
-            }
-            echo '</li>';
+            echo '</td>';
+            echo '</tr>';
         }
-        echo '</ul></div>';
+        echo '</tbody></table>';
+        echo '</div>';
     }
 
     public function render_raccolte(): void {
@@ -694,6 +790,90 @@ class TerzoConto_Admin {
     private function get_import_preview_transient_key(): string {
 		return 'terzoconto_import_preview';
 	}
+
+    private function handle_create_conto(): void {
+        $data = $this->sanitize_conto_data($_POST);
+        $this->submitted_conto = $data;
+
+        if (! $this->validate_conto_data($data)) {
+            return;
+        }
+
+        $created = $this->conti->create($data['nome'], $data['descrizione'], $data['tracciabile'], $data['attivo']);
+        $status = $created ? 'created' : 'error';
+        wp_safe_redirect(add_query_arg('tc_conto_status', $status, admin_url('admin.php?page=terzoconto-conti')));
+        exit;
+    }
+
+    private function handle_update_conto(): void {
+        $id = absint($_POST['id'] ?? 0);
+        $data = $this->sanitize_conto_data($_POST);
+        if ($id > 0) {
+            $data['id'] = $id;
+        }
+        $this->submitted_conto = $data;
+
+        if ($id <= 0 || ! $this->validate_conto_data($data)) {
+            return;
+        }
+
+        $updated = $this->conti->update($id, $data['nome'], $data['descrizione'], $data['tracciabile'], $data['attivo']);
+        $status = $updated ? 'updated' : 'error';
+        wp_safe_redirect(add_query_arg('tc_conto_status', $status, admin_url('admin.php?page=terzoconto-conti')));
+        exit;
+    }
+
+    private function handle_delete_conto(): void {
+        $id = absint($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            wp_safe_redirect(add_query_arg('tc_conto_status', 'error', admin_url('admin.php?page=terzoconto-conti')));
+            exit;
+        }
+
+        if (! $this->conti->can_delete($id)) {
+            wp_safe_redirect(add_query_arg('tc_conto_status', 'cannot_delete', admin_url('admin.php?page=terzoconto-conti')));
+            exit;
+        }
+
+        $deleted = $this->conti->delete($id);
+        $status = $deleted ? 'deleted' : 'error';
+        wp_safe_redirect(add_query_arg('tc_conto_status', $status, admin_url('admin.php?page=terzoconto-conti')));
+        exit;
+    }
+
+    private function sanitize_conto_data(array $source): array {
+        return [
+            'nome' => sanitize_text_field(wp_unslash($source['nome'] ?? '')),
+            'descrizione' => sanitize_text_field(wp_unslash($source['descrizione'] ?? '')),
+            'tracciabile' => isset($source['tracciabile']) ? 1 : 0,
+            'attivo' => isset($source['attivo']) ? 1 : 0,
+        ];
+    }
+
+    private function validate_conto_data(array $data): bool {
+        if ($data['nome'] === '') {
+            add_settings_error('terzoconto_conti', 'conto_nome', __('Il nome conto è obbligatorio.', 'terzo-conto'), 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    private function render_conti_notice(): void {
+        $status = sanitize_text_field(wp_unslash($_GET['tc_conto_status'] ?? ''));
+
+        if ($status === 'created') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto creato con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'updated') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto aggiornato con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'deleted') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto eliminato con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'cannot_delete') {
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare il conto: è associato a uno o più movimenti.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'error') {
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sui conti non riuscita.', 'terzo-conto') . '</p></div>';
+        }
+    }
 
     private function download_csv(): void {
         $movimenti = $this->movimenti->get_all();
