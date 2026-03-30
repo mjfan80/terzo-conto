@@ -253,7 +253,7 @@ class TerzoConto_Admin {
             $raccolta = $this->submitted_raccolta;
         }
 
-        $is_edit = is_array($raccolta);
+        $is_edit = is_array($raccolta) && !empty($raccolta['id']);
         $raccolte = $this->raccolte->get_all();
 
         echo '<div class="wrap"><h1>' . esc_html__('Raccolte fondi', 'terzo-conto') . '</h1>';
