@@ -517,7 +517,11 @@ class TerzoConto_Admin {
         $report = $this->report_service->get_bilancio_annuale($year);
         echo '<div class="wrap"><h1>' . esc_html__('Report', 'terzo-conto') . '</h1>';
         echo '<form method="get"><input type="hidden" name="page" value="terzoconto-report" />';
-        wp_nonce_field('terzoconto_report_filter_nonce', 'terzoconto_report_filter_nonce');
+        wp_nonce_field(
+		    'terzoconto_report_filter_nonce',
+		    'terzoconto_report_filter_nonce',
+		    false
+		);
         echo '<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" />';
         submit_button(__('Carica report', 'terzo-conto'), '', '', false);
         echo '</form>';
@@ -684,7 +688,11 @@ class TerzoConto_Admin {
     private function render_movimenti_filters(string $stato_filter): void {
         echo '<form method="get" class="terzoconto-filter-form">';
         echo '<input type="hidden" name="page" value="terzoconto" />';
-        wp_nonce_field('terzoconto_filter_nonce', 'terzoconto_filter_nonce');
+        wp_nonce_field(
+		    'terzoconto_filter_nonce',
+		    'terzoconto_filter_nonce',
+		    false
+		);
         echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzo-conto') . '</label>';
         echo '<select name="stato_movimento" id="stato_movimento">';
         echo '<option value="">' . esc_html__('Tutti gli stati', 'terzo-conto') . '</option>';
