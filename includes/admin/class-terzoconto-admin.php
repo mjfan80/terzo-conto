@@ -57,8 +57,8 @@ class TerzoConto_Admin {
 			return;
 		}
 
-		if (! $this->security->assert_manage_capability() || ! $this->security->verify_action_nonce()) {
-			return;
+		if (! $this->security->assert_manage_capability() || ! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
+		    return;
 		}
 		$action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
 
