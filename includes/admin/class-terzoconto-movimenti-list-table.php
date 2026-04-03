@@ -14,7 +14,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 
     private array $items_data = [];
 
-	public function __construct(array $items) {
+	public function __construct(array $items = []) {
 		parent::__construct([
 			'singular' => 'movimento',
 			'plural'   => 'movimenti',
@@ -25,19 +25,38 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 	}
 
     public function get_columns(): array {
+		return [
+			'cb' => '<input type="checkbox" />',
+			'id' => 'ID',
+			'data_movimento' => 'Data',
+			'progressivo_annuale' => '#',
+			'tipo' => 'Tipo',
+			'importo' => 'Importo',
+			'conto' => 'Conto',
+			'categoria' => 'Categoria',
+			'raccolta' => 'Raccolta',
+			'anagrafica' => 'Anagrafica',
+			'descrizione' => 'Descrizione',
+		];
+	}
+
+	protected function column_cb($item) {
+		return sprintf(
+			'<input type="checkbox" name="movimento_ids[]" value="%d" />',
+			$item['id']
+		);
+	}
+	
+	/* 
+    RIMOSSO: Previene la generazione dei dropdown nativi di WP, dato che
+    abbiamo il nostro form custom di modifica massiva.
+    
+    protected function get_bulk_actions() {
         return [
-            'id' => 'ID',
-            'data_movimento' => 'Data',
-            'progressivo_annuale' => '#',
-            'tipo' => 'Tipo',
-            'importo' => 'Importo',
-            'conto' => 'Conto',
-            'categoria' => 'Categoria',
-            'raccolta' => 'Raccolta',
-            'anagrafica' => 'Anagrafica',
-            'descrizione' => 'Descrizione',
+            'bulk_edit' => 'Modifica massiva'
         ];
     }
+    */
 
     protected function column_default($item, $column_name) {
         return $item[$column_name] ?? '';
@@ -45,105 +64,130 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 
     protected function column_id($item) {
 
-        $actions = [];
+		$actions = [];
 
-        if ($item['stato'] !== 'annullato') {
-            $actions['annulla'] = sprintf(
-                '<form method="post" style="display:inline;">
-                    %s
-                    <input type="hidden" name="terzoconto_action" value="annulla_movimento">
-                    <input type="hidden" name="id" value="%d">
-                    <button class="button-link delete">Annulla</button>
-                </form>',
-                wp_nonce_field('terzoconto_action_nonce', '_wpnonce', true, false),
-                $item['id']
-            );
-        }
+		// MODIFICA
+		if ($item['stato'] !== 'annullato') {
+			$edit_url = add_query_arg(
+				[
+					'page' => 'terzoconto',
+					'edit_movimento_id' => $item['id'],
+				],
+				admin_url('admin.php')
+			);
 
-        return sprintf(
-            '%1$s %2$s',
-            $item['id'],
-            $this->row_actions($actions)
-        );
-    }
+			$actions['edit'] = sprintf(
+				'<a href="%s">Modifica</a>',
+				esc_url($edit_url)
+			);
+		}
+
+		// ANNULLA
+		if ($item['stato'] !== 'annullato') {
+			$actions['annulla'] = sprintf(
+				'<a href="%s" class="submitdelete" onclick="return confirm(\'Confermi?\')">Annulla</a>',
+				esc_url(
+					wp_nonce_url(
+						add_query_arg([
+							'page' => 'terzoconto',
+							'terzoconto_action' => 'annulla_movimento',
+							'id' => $item['id'],
+						], admin_url('admin.php')),
+						'terzoconto_action_nonce'
+					)
+				)
+			);
+		}
+
+		return sprintf(
+			'%1$s %2$s',
+			$item['id'],
+			$this->row_actions($actions)
+		);
+	}
 
     public function prepare_items(): void {
 
 		global $wpdb;
 
-		$conti = $wpdb->prefix . 'terzoconto_conti';
-		$categorie = $wpdb->prefix . 'terzoconto_categorie_associazione';
-		$raccolte = $wpdb->prefix . 'terzoconto_raccolte';
-		$anagrafiche = $wpdb->prefix . 'terzoconto_anagrafiche';
-		$items = $this->items_data;
+		$movimenti_table   = $wpdb->prefix . 'terzoconto_movimenti';
+		$conti_table       = $wpdb->prefix . 'terzoconto_conti';
+		$categorie_assoc   = $wpdb->prefix . 'terzoconto_categorie_associazione';
+		$categorie_modeld  = $wpdb->prefix . 'terzoconto_categorie_modello_d';
+		$raccolte_table    = $wpdb->prefix . 'terzoconto_raccolte_fondi';
+		$anagrafiche_table = $wpdb->prefix . 'terzoconto_anagrafiche';
 
-		foreach ($items as &$item) {
+		// 🔥 QUERY UNICA (niente più N+1)
+		$results = $wpdb->get_results("
+			SELECT 
+				m.*,
+
+				c.nome AS conto_nome,
+
+				md.tipo AS modello_tipo,
+				md.codice AS modello_codice,
+
+				r.nome AS raccolta_nome,
+
+				a.nome AS anagrafica_nome,
+				a.cognome AS anagrafica_cognome,
+				a.ragione_sociale AS anagrafica_rs,
+				a.tipo AS anagrafica_tipo
+
+			FROM $movimenti_table m
+
+			LEFT JOIN $conti_table c 
+				ON c.id = m.conto_id
+
+			LEFT JOIN $categorie_assoc ca 
+				ON ca.id = m.categoria_associazione_id
+
+			LEFT JOIN $categorie_modeld md 
+				ON md.id = ca.modello_d_id
+
+			LEFT JOIN $raccolte_table r 
+				ON r.id = m.raccolta_fondi_id
+
+			LEFT JOIN $anagrafiche_table a 
+				ON a.id = m.anagrafica_id
+
+			ORDER BY m.data_movimento DESC, m.id DESC
+		", ARRAY_A) ?: [];
+
+		// 🔧 normalizzazione dati per la tabella
+		foreach ($results as &$item) {
 
 			// CONTO
-			$item['conto'] = $wpdb->get_var(
-				$wpdb->prepare("SELECT nome FROM $conti WHERE id = %d", $item['conto_id'])
-			);
+			$item['conto'] = $item['conto_nome'] ?? '';
 
-			// CATEGORIA
-			$categoria = $wpdb->get_row(
-				$wpdb->prepare("SELECT * FROM $categorie WHERE id = %d", $item['categoria_associazione_id']),
-				ARRAY_A
-			);
-
-			$cat_assoc = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT modello_d_id FROM $categorie WHERE id = %d",
-					$item['categoria_associazione_id']
-				),
-				ARRAY_A
-			);
-
-			if ($cat_assoc && !empty($cat_assoc['modello_d_id'])) {
-
-				$modello = $wpdb->get_row(
-					$wpdb->prepare(
-						"SELECT tipo, codice FROM {$wpdb->prefix}terzoconto_categorie_modello_d WHERE id = %d",
-						$cat_assoc['modello_d_id']
-					),
-					ARRAY_A
-				);
-
-				if ($modello) {
-					$item['categoria'] = $modello['tipo'] . $modello['codice']; // es: UA1
-				} else {
-					$item['categoria'] = '';
-				}
-
+			// CATEGORIA (es: UA1)
+			if (!empty($item['modello_tipo']) && !empty($item['modello_codice'])) {
+				$item['categoria'] = $item['modello_tipo'] . $item['modello_codice'];
 			} else {
 				$item['categoria'] = '';
 			}
 
 			// RACCOLTA
-			if (!empty($item['raccolta_fondi_id'])) {
-				$item['raccolta'] = $wpdb->get_var(
-					$wpdb->prepare("SELECT nome FROM $raccolte WHERE id = %d", $item['raccolta_fondi_id'])
-				);
-			} else {
-				$item['raccolta'] = '';
-			}
+			$item['raccolta'] = $item['raccolta_nome'] ?? '';
 
 			// ANAGRAFICA
-			if (!empty($item['anagrafica_id'])) {
-				$anagrafica = $wpdb->get_row(
-					$wpdb->prepare("SELECT nome, cognome FROM $anagrafiche WHERE id = %d", $item['anagrafica_id']),
-					ARRAY_A
-				);
-
-				$item['anagrafica'] = $anagrafica
-					? ($anagrafica['cognome'] . ' ' . $anagrafica['nome'])
-					: '';
+			if (!empty($item['anagrafica_tipo']) && $item['anagrafica_tipo'] === 'azienda') {
+				$item['anagrafica'] = $item['anagrafica_rs'] ?? '';
 			} else {
-				$item['anagrafica'] = '';
+				$item['anagrafica'] = trim(
+					($item['anagrafica_cognome'] ?? '') . ' ' .
+					($item['anagrafica_nome'] ?? '')
+				);
 			}
 		}
 
-		$this->items = $items;
+		$this->items = $results;
 
 		$this->_column_headers = [$this->get_columns(), [], []];
+
+		$this->set_pagination_args([
+			'total_items' => count($results),
+			'per_page'    => 9999
+		]);
 	}
 }
