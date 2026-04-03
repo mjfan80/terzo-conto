@@ -37,7 +37,7 @@ class TerzoConto_Admin {
 
     public function hooks(): void {
 		add_action('admin_menu', [$this, 'register_menu']);
-		add_action('admin_init', [$this, 'handle_post_actions']); // ← TORNA QUI
+		add_action('admin_init', [$this, 'handle_post_actions']);
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
 	}
 
@@ -53,14 +53,40 @@ class TerzoConto_Admin {
     }
 
     public function handle_post_actions(): void {
-		if (! isset($_POST['terzoconto_action'])) {
+		
+        // Recuperiamo l'azione sia da POST che da GET (per far funzionare i link come "Annulla")
+        $action = '';
+        if (isset($_POST['terzoconto_action'])) {
+            $action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
+        } elseif (isset($_GET['terzoconto_action'])) {
+            $action = sanitize_text_field(wp_unslash($_GET['terzoconto_action']));
+        }
+
+		if ($action === '') {
 			return;
 		}
 
-		if (! $this->security->assert_manage_capability() || ! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
+		if (! $this->security->assert_manage_capability()) {
 		    return;
 		}
-		$action = sanitize_text_field(wp_unslash($_POST['terzoconto_action']));
+
+        // Verifica di sicurezza differenziata in base all'azione
+        if ($action === 'bulk_update_movimenti') {
+            // Usa il Nonce personalizzato del Form della Tabella
+            if (! $this->security->verify_post_nonce('terzoconto_action_nonce', 'tc_bulk_nonce')) {
+                return;
+            }
+        } elseif ($action === 'annulla_movimento') {
+            // Usa la verifica GET per i link della tabella
+            if (! $this->security->verify_get_nonce('terzoconto_action_nonce')) {
+                return;
+            }
+        } else {
+            // Azioni standard POST (inserimento movimento, creazione conto, ecc...)
+            if (! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
+                return;
+            }
+        }
 
         switch ($action) {
             case 'add_conto':
@@ -106,7 +132,6 @@ class TerzoConto_Admin {
 				$valid_rows = $this->import_service->get_valid_rows($rows);
 				$duplicates = $this->import_service->detect_duplicates($rows, $this->movimenti->get_all());
 
-				// 👉 QUI SALVIAMO IN MEMORIA (NON DB)
 				$this->submitted_movimento = [
 					'rows' => $rows,
 					'valid_rows' => $valid_rows,
@@ -136,6 +161,10 @@ class TerzoConto_Admin {
 			case 'annulla_movimento':
 				$this->handle_annulla_movimento();
 				break;
+				
+			case 'bulk_update_movimenti':
+				$this->handle_bulk_update_movimenti();
+				break;
 		}
 	}
 
@@ -145,7 +174,7 @@ class TerzoConto_Admin {
         }
 
         $stato_filter = $this->get_movimento_stato_filter();
-        $movimenti = $this->movimenti->get_all();
+        $movimenti = []; // query fatta dentro la list-table
         $categorie = $this->categorie->get_associazione();
         $conti = $this->conti->get_all();
         $raccolte = $this->raccolte->get_aperte();
@@ -182,12 +211,57 @@ class TerzoConto_Admin {
         }
 
         echo '<div class="wrap"><h1>TerzoConto - ' . esc_html__('Movimenti', 'terzo-conto') . '</h1>';
-        settings_errors('terzoconto');
+        $this->render_movimenti_notice(); 
+		settings_errors('terzoconto');
         $this->render_movimento_form($categorie, $conti, $raccolte, $anagrafiche, $movimento);
         $this->render_movimenti_filters($stato_filter);
         $table = new TerzoConto_Movimenti_List_Table($movimenti);
         $table->prepare_items();
-        $table->display();
+		echo '<form method="post">';
+		wp_nonce_field('terzoconto_action_nonce', 'tc_bulk_nonce');
+
+		echo '<input type="hidden" name="terzoconto_action" value="bulk_update_movimenti" />';
+
+		echo '<div style="margin:10px 0;padding:10px;background:#fff;border:1px solid #ccd0d4;">';
+
+		echo '<strong>Modifica massiva</strong><br /><br />';
+
+		echo '<select name="bulk_categoria_id">';
+		echo '<option value="">-- Categoria (opzionale) --</option>';
+		foreach ($categorie as $cat) {
+			echo '<option value="'.esc_attr($cat['id']).'">'.esc_html($cat['nome']).'</option>';
+		}
+		echo '</select> ';
+
+		echo '<select name="bulk_conto_id">';
+		echo '<option value="">-- Conto (opzionale) --</option>';
+		foreach ($conti as $conto) {
+			echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
+		}
+		echo '</select> ';
+
+		echo '<select name="bulk_raccolta_id">';
+		echo '<option value="">-- Raccolta (opzionale) --</option>';
+		foreach ($raccolte as $raccolta) {
+			echo '<option value="'.esc_attr($raccolta['id']).'">'.esc_html($raccolta['nome']).'</option>';
+		}
+		echo '</select> ';
+
+		echo '<select name="bulk_anagrafica_id">';
+		echo '<option value="">-- Anagrafica (opzionale) --</option>';
+		foreach ($anagrafiche as $a) {
+			$label = $this->format_anagrafica_label($a);
+			echo '<option value="'.esc_attr($a['id']).'">'.esc_html($label).'</option>';
+		}
+		echo '</select> ';
+
+		submit_button('Applica ai selezionati', 'primary', '', false);
+
+		echo '</div>';
+
+		$table->display();
+
+		echo '</form>';
         echo '</div>';
     }
 
@@ -306,6 +380,29 @@ class TerzoConto_Admin {
 
 		");
 	}
+	
+	private function render_movimenti_notice(): void {
+        // Notifiche standard creazione/modifica/annullamento
+        $status = sanitize_text_field(wp_unslash($_GET['tc_movimento_status'] ?? ''));
+        if ($status === 'created') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento creato con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'updated') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento aggiornato con successo.', 'terzo-conto') . '</p></div>';
+        } elseif ($status === 'annullato') {
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento annullato con successo.', 'terzo-conto') . '</p></div>';
+        }
+
+        // Notifiche Modifica Massiva
+        $bulk_status = sanitize_text_field(wp_unslash($_GET['tc_bulk'] ?? ''));
+        if ($bulk_status === 'done') {
+            $count = (int) ($_GET['updated'] ?? 0);
+            echo '<div class="notice notice-success is-dismissible"><p>' . sprintf(esc_html__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count) . '</p></div>';
+        } elseif ($bulk_status === 'no_ids') {
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
+        } elseif ($bulk_status === 'no_fields') {
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun campo selezionato per la modifica massiva. Scegli almeno un valore dai menu a tendina.', 'terzo-conto') . '</p></div>';
+        }
+    }
 
     public function render_categorie(): void {
         if (! $this->security->assert_manage_capability()) {
@@ -1361,4 +1458,84 @@ class TerzoConto_Admin {
 		wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_movimento_status=annullato'));
 		exit;
 	}
+	
+	private function handle_bulk_update_movimenti(): void {
+        global $wpdb;
+
+        // Acquisizione e pulizia degli ID (Nessun controllo nonce qui, è già stato fatto!)
+        $ids = $_POST['movimento_ids'] ?? [];
+        if (empty($ids) || !is_array($ids)) {
+            wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_bulk=no_ids'));
+            exit;
+        }
+
+        $clean_ids = [];
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $clean_ids[] = $id;
+            }
+        }
+
+        if (empty($clean_ids)) {
+            wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_bulk=no_ids'));
+            exit;
+        }
+
+        // 3. Acquisizione dei campi da modificare
+        $fields = [];
+        if (!empty($_POST['bulk_categoria_id'])) {
+            $fields['categoria_associazione_id'] = (int) $_POST['bulk_categoria_id'];
+        }
+        if (!empty($_POST['bulk_conto_id'])) {
+            $fields['conto_id'] = (int) $_POST['bulk_conto_id'];
+        }
+        if (!empty($_POST['bulk_raccolta_id'])) {
+            $fields['raccolta_fondi_id'] = (int) $_POST['bulk_raccolta_id'];
+        }
+        if (!empty($_POST['bulk_anagrafica_id'])) {
+            $fields['anagrafica_id'] = (int) $_POST['bulk_anagrafica_id'];
+        }
+
+        if (empty($fields)) {
+            wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_bulk=no_fields'));
+            exit;
+        }
+
+        // 4. Preparazione della Query
+        $table = $wpdb->prefix . 'terzoconto_movimenti';
+        
+        // Aggiungiamo la data di aggiornamento
+        $fields['updated_at'] = current_time('mysql');
+
+        $set_parts = [];
+        foreach ($fields as $col => $val) {
+            if ($col === 'updated_at') {
+                $set_parts[] = "$col = '" . esc_sql($val) . "'";
+            } else {
+                $set_parts[] = "$col = " . (int)$val;
+            }
+        }
+
+        $ids_sql = implode(',', $clean_ids);
+        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_sql})";
+        
+        // 5. Esecuzione della Query
+        $updated = $wpdb->query($sql);
+
+        // Trappola per errori MySQL
+        if ($updated === false) {
+            wp_die(
+                '<h1>Errore MySQL</h1>' .
+                '<p>Il database ha rifiutato l\'aggiornamento dei dati.</p>' .
+                '<p><strong>Errore riportato:</strong> ' . esc_html($wpdb->last_error) . '</p>' .
+                '<p><strong>Query tentata:</strong> <code>' . esc_html($sql) . '</code></p>' .
+                '<p>Usa la freccia indietro del browser per tornare al plugin.</p>'
+            );
+        }
+
+        // 6. Redirect finale
+        wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_bulk=done&updated=' . (int)$updated));
+        exit;
+    }
 }
