@@ -223,9 +223,69 @@ class TerzoConto_Admin {
 		");
 		
 		wp_add_inline_style('select2', "
+
+			/* ====== TABELLA MOVIMENTI ====== */
+
+			.wp-list-table th.column-id,
+			.wp-list-table td.column-id {
+				width: 60px;
+			}
+
+			.wp-list-table th.column-data_movimento,
+			.wp-list-table td.column-data_movimento {
+				width: 110px;
+			}
+
+			.wp-list-table th.column-progressivo_annuale,
+			.wp-list-table td.column-progressivo_annuale {
+				width: 60px;
+			}
+
+			.wp-list-table th.column-tipo,
+			.wp-list-table td.column-tipo {
+				width: 80px;
+			}
+
+			.wp-list-table th.column-importo,
+			.wp-list-table td.column-importo {
+				width: 100px;
+				text-align: right;
+			}
+
+			.wp-list-table th.column-conto,
+			.wp-list-table td.column-conto {
+				width: 140px;
+			}
+
+			.wp-list-table th.column-categoria,
+			.wp-list-table td.column-categoria {
+				width: 160px;
+			}
+
+			.wp-list-table th.column-raccolta,
+			.wp-list-table td.column-raccolta {
+				width: 160px;
+			}
+
+			.wp-list-table th.column-anagrafica,
+			.wp-list-table td.column-anagrafica {
+				width: 180px;
+			}
+
+			.wp-list-table th.column-descrizione,
+			.wp-list-table td.column-descrizione {
+				width: auto;
+			}
+
+		");
+		
+		wp_add_inline_style('select2', "
+
+			/* ===== FORM MOVIMENTO GRID ===== */
+
 			.terzoconto-movimento-grid {
 				display: grid;
-				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				grid-template-columns: repeat(3, 1fr);
 				gap: 12px;
 				max-width: 1000px;
 				margin-bottom: 12px;
@@ -243,6 +303,7 @@ class TerzoConto_Admin {
 			.select2-container {
 				width: 100% !important;
 			}
+
 		");
 	}
 
