@@ -192,21 +192,59 @@ class TerzoConto_Admin {
     }
 
     public function enqueue_assets(string $hook): void {
-        if ($hook !== 'toplevel_page_terzoconto') {
-            return;
-        }
+		if ($hook !== 'toplevel_page_terzoconto') {
+			return;
+		}
 
-        $config = [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('terzoconto_search_anagrafiche_nonce'),
-            'minChars' => 2,
-            'noResults' => __('Nessuna anagrafica trovata.', 'terzo-conto'),
-            'searching' => __('Ricerca in corso…', 'terzo-conto'),
-        ];
+		// SELECT2
+		wp_enqueue_style(
+			'select2',
+			'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
+		);
 
-        wp_add_inline_style('common', '.terzoconto-movimento-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;max-width:1100px}.terzoconto-movimento-grid p{margin:0}.terzoconto-ajax-results{display:none;border:1px solid #c3c4c7;background:#fff;max-height:220px;overflow:auto;position:absolute;z-index:1000;width:100%;box-sizing:border-box}.terzoconto-ajax-results button{display:block;width:100%;border:0;background:transparent;text-align:left;padding:8px 10px;cursor:pointer}.terzoconto-ajax-results button:hover,.terzoconto-ajax-results button:focus{background:#f0f0f1}.terzoconto-field-help{display:block;color:#646970;margin-top:4px}.terzoconto-anagrafica-search{position:relative}.terzoconto-filter-form{margin:16px 0}');
-        wp_add_inline_script('jquery-core', 'window.terzoContoAnagrafiche=' . wp_json_encode($config) . ';jQuery(function($){var cfg=window.terzoContoAnagrafiche||{};var $search=$("#terzoconto-anagrafica-search");var $id=$("#anagrafica_id");var $results=$("#terzoconto-anagrafica-results");var xhr=null;function closeResults(){$results.hide().empty();}function selectItem(item){$id.val(item.id);$search.val(item.label);closeResults();}$(document).on("click",function(e){if(!$(e.target).closest(".terzoconto-anagrafica-search").length){closeResults();}});$(document).on("input","#terzoconto-anagrafica-search",function(){var term=$.trim($search.val());if(term.length===0){$id.val(0);closeResults();return;}if(term.length<(cfg.minChars||2)){closeResults();return;}if(xhr){xhr.abort();}$results.html("<div class=\"terzoconto-field-help\">"+(cfg.searching||"")+"</div>").show();xhr=$.get(cfg.ajaxUrl,{action:"terzoconto_search_anagrafiche",nonce:cfg.nonce,term:term}).done(function(items){$results.empty();if(!items||!items.length){$results.html("<div class=\"terzoconto-field-help\">"+(cfg.noResults||"")+"</div>").show();return;}$.each(items,function(_,item){var $btn=$("<button type=\"button\" />").text(item.label);$btn.on("click",function(){selectItem(item);});$results.append($btn);});$results.show();}).fail(function(){closeResults();});});$(document).on("change","#terzoconto-anagrafica-search",function(){if($.trim($search.val())===""){$id.val(0);}});});');
-    }
+		wp_enqueue_script(
+			'select2',
+			'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+			['jquery'],
+			null,
+			true
+		);
+
+		// INIT SELECT2
+		wp_add_inline_script('select2', "
+			jQuery(document).ready(function($) {
+				$('#terzoconto-anagrafica-select').select2({
+					width: '100%',
+					placeholder: 'Seleziona o cerca anagrafica',
+					allowClear: true,
+				    minimumInputLength: 1
+				});
+			});
+		");
+		
+		wp_add_inline_style('select2', "
+			.terzoconto-movimento-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+				gap: 12px;
+				max-width: 1000px;
+				margin-bottom: 12px;
+			}
+
+			.terzoconto-movimento-grid p {
+				margin: 0;
+			}
+
+			.terzoconto-movimento-grid input,
+			.terzoconto-movimento-grid select {
+				width: 100%;
+			}
+
+			.select2-container {
+				width: 100% !important;
+			}
+		");
+	}
 
     public function render_categorie(): void {
         if (! $this->security->assert_manage_capability()) {
@@ -585,81 +623,101 @@ class TerzoConto_Admin {
     }
 
     private function render_movimento_form(array $categorie, array $conti, array $raccolte, array $anagrafiche, ?array $movimento = null): void {
-	    $is_edit = is_array($movimento);
-	    $selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
-	    $selected_anagrafica_label = '';
-	
-	    foreach ($anagrafiche as $anagrafica) {
-	        if ((int) ($anagrafica['id'] ?? 0) === $selected_anagrafica) {
-	            $selected_anagrafica_label = $this->format_anagrafica_label($anagrafica);
-	            break;
-	        }
-	    }
-	
-	    echo '<form method="post">';
-	    wp_nonce_field('terzoconto_action_nonce');
-	    echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_movimento' : 'add_movimento') . '" />';
-	    if ($is_edit) {
-	        echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
-	    }
-	
-	    echo '<div class="terzoconto-movimento-grid">';
-	
-	    echo '<p><label>Data movimento</label><br />
-	        <input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
-	
-	    echo '<p><label>Importo</label><br />
-	        <input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
-	
-	    $tipo = $movimento['tipo'] ?? 'entrata';
-	    echo '<p><label>Tipo</label><br />
-	        <select name="tipo">
-	            <option value="entrata"' . selected($tipo, 'entrata', false) . '>Entrata</option>
-	            <option value="uscita"' . selected($tipo, 'uscita', false) . '>Uscita</option>
-	        </select></p>';
-	
-	    // 👉 CATEGORIA (REFATTORED)
-	    $selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
-	
-	    echo '<p><label>Categoria</label><br />';
-	    echo $this->render_categoria_select_html(
-	        $categorie,
-	        'categoria_associazione_id',
-	        $selected_categoria,
-	        true
-	    );
-	    echo '</p>';
-	
-	    // 👉 CONTO (lasciato com’è)
-	    $selected_conto = (int) ($movimento['conto_id'] ?? 0);
-	
-	    echo '<p><label>Conto</label><br /><select name="conto_id" required>';
-	    echo '<option value="0">Seleziona conto</option>';
-	    foreach ($conti as $conto) {
-	        echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
-	            . esc_html($conto['nome']) .
-	        '</option>';
-	    }
-	    echo '</select></p>';
-	
-	    echo '<p><label>Raccolta fondi</label><br /><select name="raccolta_fondi_id">';
-	    echo '<option value="0">Nessuna raccolta</option>';
-	    $selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
-	    foreach ($raccolte as $raccolta) {
-	        echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
-	            . esc_html($raccolta['nome']) .
-	        '</option>';
-	    }
-	    echo '</select></p>';
-	
-	    echo '<p><label>Descrizione</label><br />
-	        <input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
-	
-	    echo '</div>';
-	
-	    submit_button($is_edit ? 'Aggiorna movimento' : 'Aggiungi movimento');
-	
-	    echo '</form><hr />';
+
+		$is_edit = is_array($movimento);
+
+		$selected_anagrafica = (int) ($movimento['anagrafica_id'] ?? 0);
+		$selected_anagrafica_label = '';
+
+		foreach ($anagrafiche as $anagrafica) {
+			if ((int) ($anagrafica['id'] ?? 0) === $selected_anagrafica) {
+				$selected_anagrafica_label = $this->format_anagrafica_label($anagrafica);
+				break;
+			}
+		}
+
+		echo '<form method="post">';
+		wp_nonce_field('terzoconto_action_nonce');
+
+		echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_movimento' : 'add_movimento') . '" />';
+
+		if ($is_edit) {
+			echo '<input type="hidden" name="id" value="' . esc_attr((string) $movimento['id']) . '" />';
+		}
+
+		echo '<div class="terzoconto-movimento-grid">';
+
+		// DATA
+		echo '<p><label>Data movimento</label><br />
+			<input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
+
+		// IMPORTO
+		echo '<p><label>Importo</label><br />
+			<input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
+
+		// TIPO
+		$tipo = $movimento['tipo'] ?? 'entrata';
+		echo '<p><label>Tipo</label><br />
+			<select name="tipo">
+				<option value="entrata"' . selected($tipo, 'entrata', false) . '>Entrata</option>
+				<option value="uscita"' . selected($tipo, 'uscita', false) . '>Uscita</option>
+			</select></p>';
+
+		// CATEGORIA
+		$selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
+		echo '<p><label>Categoria</label><br />';
+		echo $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true);
+		echo '</p>';
+
+		// CONTO
+		$selected_conto = (int) ($movimento['conto_id'] ?? 0);
+		echo '<p><label>Conto</label><br /><select name="conto_id" required>';
+		echo '<option value="0">Seleziona conto</option>';
+		foreach ($conti as $conto) {
+			echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
+				. esc_html($conto['nome']) .
+			'</option>';
+		}
+		echo '</select></p>';
+
+		// RACCOLTA (GIÀ CORRETTA)
+		echo '<p><label>Raccolta fondi</label><br /><select name="raccolta_fondi_id">';
+		echo '<option value="0">Nessuna raccolta</option>';
+		$selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
+		foreach ($raccolte as $raccolta) {
+			echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
+				. esc_html($raccolta['nome']) .
+			'</option>';
+		}
+		echo '</select></p>';
+
+		//ANAGRAFICA (FIX VERO)
+		echo '<p><label>Anagrafica</label><br />';
+		echo '<select name="anagrafica_id" id="terzoconto-anagrafica-select">';
+
+		echo '<option value="0"></option>'; // per allowClear
+
+		foreach ($anagrafiche as $anagrafica) {
+
+			$label = $this->format_anagrafica_label($anagrafica);
+
+			echo '<option value="' . esc_attr($anagrafica['id']) . '" ' .
+				selected($selected_anagrafica, (int)$anagrafica['id'], false) . '>' .
+				esc_html($label) .
+			'</option>';
+		}
+
+		echo '</select></p>';
+
+		// DESCRIZIONE
+		echo '<p><label>Descrizione</label><br />
+			<input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+
+		echo '</div>';
+
+		submit_button($is_edit ? 'Aggiorna movimento' : 'Aggiungi movimento');
+
+		echo '</form><hr />';
 	}
 
     private function get_categoria_optgroup_label(string $tipo, string $area): string {
