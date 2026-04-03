@@ -124,6 +124,18 @@ class TerzoConto_Admin {
             case 'export_movimenti_csv':
                 $this->download_csv();
                 break;
+				
+			case 'add_movimento':
+				$this->handle_create_movimento();
+				break;
+
+			case 'update_movimento':
+				$this->handle_update_movimento();
+				break;
+
+			case 'annulla_movimento':
+				$this->handle_annulla_movimento();
+				break;
 		}
 	}
 
@@ -385,6 +397,37 @@ class TerzoConto_Admin {
 		echo '<div class="wrap"><h1>Import CSV</h1>';
 
 		settings_errors('terzoconto');
+		
+		echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px 16px;margin:12px 0;max-width:900px;">';
+
+		echo '<strong>Formato CSV richiesto</strong><br /><br />';
+
+		echo '<ul style="margin-left:18px;">';
+		echo '<li>Separatore: <strong>punto e virgola ( ; )</strong></li>';
+		echo '<li>Encoding: UTF-8</li>';
+		echo '<li>Numero colonne: 3 oppure 4</li>';
+		echo '</ul>';
+
+		echo '<strong>Formato a 3 colonne:</strong><br />';
+		echo '<code>data;importo;descrizione</code><br />';
+		echo '<small>Il tipo (entrata/uscita) viene dedotto automaticamente dal segno dell\'importo</small><br /><br />';
+
+		echo '<strong>Formato a 4 colonne:</strong><br />';
+		echo '<code>data;importo;descrizione;tipo</code><br />';
+		echo '<small>Tipo: E = entrata, U = uscita (in questo formato gli importi devono essere positivi)</small><br /><br />';
+
+		echo '<strong>Formato data:</strong> YYYY-MM-DD oppure DD/MM/YYYY<br />';
+		echo '<strong>Importo:</strong> numero (usa il punto come separatore decimale, es. 123.45)<br /><br />';
+
+		echo '<strong>Esempio valido:</strong><br />';
+		echo '<pre style="background:#f6f7f7;padding:8px;">';
+		echo "data;importo;descrizione;tipo\n";
+		echo "2025-10-31;50.00;Donazione evento;E\n";
+		echo "2025-10-31;20.00;Acquisto materiali;U";
+		echo '</pre>';
+
+		echo '</div>';
+		
 
 		echo '<form method="post" enctype="multipart/form-data">';
 		wp_nonce_field('terzoconto_action_nonce');
@@ -1139,4 +1182,64 @@ class TerzoConto_Admin {
         echo $csv; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         exit;
     }
+	
+	private function handle_create_movimento(): void {
+
+		$data = $this->sanitize_movimento_data($_POST);
+		$this->submitted_movimento = $data;
+
+		if (! $this->validate_movimento_data($data)) {
+			return;
+		}
+
+		$ok = $this->movimenti->create($data);
+
+		if (! $ok) {
+			add_settings_error('terzoconto', 'create_error', 'Errore creazione movimento', 'error');
+			return;
+		}
+
+		wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_movimento_status=created'));
+		exit;
+	}
+	
+	private function handle_update_movimento(): void {
+
+		$id = absint($_POST['id'] ?? 0);
+
+		if ($id <= 0) {
+			add_settings_error('terzoconto', 'invalid_id', 'ID non valido', 'error');
+			return;
+		}
+
+		$data = $this->sanitize_movimento_data($_POST);
+
+		if (! $this->validate_movimento_data($data, $id)) {
+			return;
+		}
+
+		$ok = $this->movimenti->update($id, $data);
+
+		if (! $ok) {
+			add_settings_error('terzoconto', 'update_error', 'Errore aggiornamento movimento', 'error');
+			return;
+		}
+
+		wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_movimento_status=updated'));
+		exit;
+	}
+	
+	private function handle_annulla_movimento(): void {
+
+		$id = absint($_POST['id'] ?? 0);
+
+		if ($id <= 0) {
+			return;
+		}
+
+		$this->movimenti->mark_annullato($id);
+
+		wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_movimento_status=annullato'));
+		exit;
+	}
 }
