@@ -262,6 +262,7 @@ class TerzoConto_Admin {
 		$table->display();
 
 		echo '</form>';
+		$this->render_support_box();
         echo '</div>';
     }
 
@@ -297,13 +298,39 @@ class TerzoConto_Admin {
 		");
 		
 		wp_add_inline_style('select2', "
+		
+			.terzoconto-support-box {
+				background: #fff;
+				border: 1px solid #ccd0d4;
+				padding: 16px;
+				margin-top: 30px;
+				max-width: 500px;
+			}
+
+			.terzoconto-support-box h2 {
+				margin-top: 0;
+			}
+
+			.terzoconto-support-box .button {
+				margin-top: 5px;
+			}
 
 			/* ====== TABELLA MOVIMENTI ====== */
 
 			.wp-list-table th.column-id,
 			.wp-list-table td.column-id {
-				width: 60px;
+				width: 70px; 
 			}
+
+			/* Stile per le icone Modifica/Annulla */
+			.wp-list-table .row-actions span.dashicons {
+				font-size: 18px;
+				width: 18px;
+				height: 18px;
+				margin-top: 2px;
+			}
+			.wp-list-table .row-actions .edit a { color: #2271b1; } /* Matita blu */
+			.wp-list-table .row-actions .annulla a { color: #d63638; } /* Cestino rosso */
 
             /* --- AGGIUNTO IL CSS PER LA COLONNA STATO QUI --- */
 			.wp-list-table th.column-stato,
@@ -1759,4 +1786,35 @@ class TerzoConto_Admin {
         wp_safe_redirect(admin_url('admin.php?page=terzoconto&tc_bulk=done&updated=' . (int)$updated));
         exit;
     }
+	
+	private function render_support_box(): void{
+		?>
+		<div class="terzoconto-support-box">
+			<h2>☕ Supporta il progetto</h2>
+
+			<p>
+				Questo plugin è sviluppato e mantenuto gratuitamente.<br>
+				Se ti è utile, puoi supportarlo:
+			</p>
+
+			<p>
+				<a href="https://github.com/sponsors/mjfan80" target="_blank" class="button button-primary">
+					❤️ GitHub Sponsors
+				</a>
+			</p>
+
+			<p>
+				<a href="https://www.buymeacoffee.com/gabrieleprandini" target="_blank" class="button">
+					☕ Offrimi un caffè
+				</a>
+			</p>
+
+			<p style="font-size:12px; opacity:0.7;">
+				Sviluppato da Gabriele Prandini (mjfan80)
+			</p>
+		</div>
+		<?php
+	}
+	
+	
 }
