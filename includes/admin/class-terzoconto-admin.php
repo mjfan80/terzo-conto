@@ -305,6 +305,13 @@ class TerzoConto_Admin {
 				width: 60px;
 			}
 
+            /* --- AGGIUNTO IL CSS PER LA COLONNA STATO QUI --- */
+			.wp-list-table th.column-stato,
+			.wp-list-table td.column-stato {
+				width: 75px;
+                text-align: center;
+			}
+
 			.wp-list-table th.column-data_movimento,
 			.wp-list-table td.column-data_movimento {
 				width: 110px;
@@ -1071,6 +1078,13 @@ class TerzoConto_Admin {
 		// DESCRIZIONE
 		echo '<p><label>Descrizione</label><br />
 			<input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
+			
+		$stato_selezionato = $movimento['stato'] ?? 'attivo';
+		echo '<p><label>Stato del Movimento</label><br />
+			<select name="stato">
+				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>Attivo</option>
+				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>Annullato</option>
+			</select></p>';
 
 		echo '</div>';
 
@@ -1168,11 +1182,17 @@ class TerzoConto_Admin {
         if (! in_array($tipo, ['entrata', 'uscita'], true)) {
             $tipo = 'entrata';
         }
+		
+		$stato = sanitize_text_field(wp_unslash($source['stato'] ?? 'attivo'));
+        if (! in_array($stato, ['attivo', 'annullato'], true)) {
+            $stato = 'attivo';
+        }
 
         return [
             'data_movimento' => sanitize_text_field(wp_unslash($source['data_movimento'] ?? '')),
             'importo' => (float) str_replace(',', '.', (string) wp_unslash($source['importo'] ?? '0')),
             'tipo' => $tipo,
+			'stato' => $stato,
             'categoria_associazione_id' => absint($source['categoria_associazione_id'] ?? 0),
             'conto_id' => absint($source['conto_id'] ?? 0),
             'raccolta_fondi_id' => absint($source['raccolta_fondi_id'] ?? 0),

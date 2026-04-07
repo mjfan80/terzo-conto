@@ -28,6 +28,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 		return [
 			'cb' => '<input type="checkbox" />',
 			'id' => 'ID',
+			'stato' => 'Stato', 
 			'data_movimento' => 'Data',
 			'progressivo_annuale' => '#',
 			'tipo' => 'Tipo',
@@ -63,29 +64,26 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
     }
 
     protected function column_id($item) {
-
 		$actions = [];
 
-		// MODIFICA
-		if ($item['stato'] !== 'annullato') {
-			$edit_url = add_query_arg(
-				[
-					'page' => 'terzoconto',
-					'edit_movimento_id' => $item['id'],
-				],
-				admin_url('admin.php')
-			);
+		// 1. MODIFICA (Sempre visibile, così puoi ripristinare un movimento annullato!)
+        $edit_url = add_query_arg(
+            [
+                'page' => 'terzoconto',
+                'edit_movimento_id' => $item['id'],
+            ],
+            admin_url('admin.php')
+        );
 
-			$actions['edit'] = sprintf(
-				'<a href="%s">Modifica</a>',
-				esc_url($edit_url)
-			);
-		}
+        $actions['edit'] = sprintf(
+            '<a href="%s">Modifica</a>',
+            esc_url($edit_url)
+        );
 
-		// ANNULLA
+		// 2. ANNULLA (Visibile solo se il movimento è attivo)
 		if ($item['stato'] !== 'annullato') {
 			$actions['annulla'] = sprintf(
-				'<a href="%s" class="submitdelete" onclick="return confirm(\'Confermi?\')">Annulla</a>',
+				'<a href="%s" class="submitdelete" onclick="return confirm(\'Confermi di voler annullare questo movimento?\')">Annulla</a>',
 				esc_url(
 					wp_nonce_url(
 						add_query_arg([
@@ -105,6 +103,13 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 			$this->row_actions($actions)
 		);
 	}
+	
+	protected function column_stato($item) {
+        if ($item['stato'] === 'annullato') {
+            return '<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">Annullato</span>';
+        }
+        return '<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">Attivo</span>';
+    }
 
     public function prepare_items(): void {
 
