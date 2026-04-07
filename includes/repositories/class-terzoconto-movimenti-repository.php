@@ -47,7 +47,7 @@ class TerzoConto_Movimenti_Repository {
             'anagrafica_id' => $data['anagrafica_id'] ?: null,
             'descrizione' => $data['descrizione'],
             'user_id' => get_current_user_id(),
-            'stato' => 'attivo',
+            'stato' => $data['stato'] ?? 'attivo',
             'created_at' => $now,
             'updated_at' => $now,
         ], ['%d', '%d', '%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s']);
@@ -82,10 +82,11 @@ class TerzoConto_Movimenti_Repository {
                 'raccolta_fondi_id' => $data['raccolta_fondi_id'] ?: null,
                 'anagrafica_id' => $data['anagrafica_id'] ?: null,
                 'descrizione' => $data['descrizione'],
+				'stato' => $data['stato'] ?? 'attivo',
                 'updated_at' => current_time('mysql'),
             ],
             ['id' => $id],
-            ['%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s'],
+            ['%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s'],
             ['%d']
         );
     }

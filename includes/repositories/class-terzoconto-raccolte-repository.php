@@ -6,15 +6,17 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Raccolte_Repository {
     private string $table;
+    private string $movimenti_table;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'terzoconto_raccolte_fondi';
+        $this->movimenti_table = $wpdb->prefix . 'terzoconto_movimenti';
     }
 
     public function get_all(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY data_inizio DESC", ARRAY_A) ?: [];
+        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY (stato = 'aperta') DESC, data_inizio DESC", ARRAY_A) ?: [];
     }
 
     public function find_by_id(int $id): ?array {
@@ -37,7 +39,54 @@ class TerzoConto_Raccolte_Repository {
             'data_inizio' => $data['data_inizio'],
             'data_fine' => $data['data_fine'] ?: null,
             'stato' => $data['stato'],
-        ], ['%s', '%s', '%s', '%s', '%s']);
+            'relazione_illustrativa' => $data['relazione_illustrativa'] ?: null,
+        ], ['%s', '%s', '%s', '%s', '%s', '%s']);
+    }
+
+    public function update(int $id, array $data): bool {
+        global $wpdb;
+        return false !== $wpdb->update(
+            $this->table,
+            [
+                'nome' => $data['nome'],
+                'descrizione' => $data['descrizione'],
+                'data_inizio' => $data['data_inizio'],
+                'data_fine' => $data['data_fine'] ?: null,
+                'stato' => $data['stato'],
+                'relazione_illustrativa' => $data['relazione_illustrativa'] ?: null,
+            ],
+            ['id' => $id],
+            ['%s', '%s', '%s', '%s', '%s', '%s'],
+            ['%d']
+        );
+    }
+
+    public function count_movimenti(int $raccolta_id): int {
+        global $wpdb;
+        return (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->movimenti_table} WHERE raccolta_fondi_id = %d",
+                $raccolta_id
+            )
+        );
+    }
+
+    public function can_delete(int $raccolta_id): bool {
+        return $this->count_movimenti($raccolta_id) === 0;
+    }
+
+    public function delete(int $id): bool {
+        global $wpdb;
+
+        if (! $this->can_delete($id)) {
+            return false;
+        }
+
+        return false !== $wpdb->delete(
+            $this->table,
+            ['id' => $id],
+            ['%d']
+        );
     }
 
     public function is_open(int $id): bool {
