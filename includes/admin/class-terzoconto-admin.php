@@ -750,34 +750,235 @@ class TerzoConto_Admin {
             wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
         }
 
-        $nonce = sanitize_text_field(wp_unslash($_GET['terzoconto_report_filter_nonce'] ?? ''));
-        $has_valid_nonce = $this->security->verify_get_nonce($nonce, 'terzoconto_report_filter_nonce');
-        $year = (isset($_GET['year']) && $has_valid_nonce) ? absint($_GET['year']) : (int) gmdate('Y');
-        $report = $this->report_service->get_bilancio_annuale($year);
-        echo '<div class="wrap"><h1>' . esc_html__('Report', 'terzo-conto') . '</h1>';
-        echo '<form method="get"><input type="hidden" name="page" value="terzoconto-report" />';
-        wp_nonce_field(
-		    'terzoconto_report_filter_nonce',
-		    'terzoconto_report_filter_nonce',
-		    false
-		);
-        echo '<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" />';
-        submit_button(__('Carica report', 'terzo-conto'), '', '', false);
-        echo '</form>';
+        // Recuperiamo le impostazioni dell'ente per le intestazioni
+        $settings_repo = new TerzoConto_Settings_Repository();
+        $settings = $settings_repo->get() ?: [];
+        $nome_ente = $settings['nome_ente'] ?? 'Nome Ente Non Impostato';
+        $cf_ente = $settings['codice_fiscale'] ?? 'CF Non Impostato';
 
-        echo '<h2>' . esc_html__('Bilancio annuale aggregato per Modello D', 'terzo-conto') . '</h2>';
-        echo '<table class="widefat"><thead><tr><th>Codice</th><th>Voce</th><th>Tipo</th><th>Totale</th></tr></thead><tbody>';
-        foreach ($report as $row) {
-            echo '<tr><td>' . esc_html($row['codice']) . '</td><td>' . esc_html($row['nome']) . '</td><td>' . esc_html($row['tipo']) . '</td><td>' . esc_html(number_format((float) $row['totale'], 2, ',', '.')) . '</td></tr>';
+        $tab = sanitize_text_field($_GET['tab'] ?? 'modello_d');
+        $year = isset($_GET['year']) ? absint($_GET['year']) : (int) gmdate('Y');
+
+        echo '<div class="wrap tc-report-wrap">';
+        
+        // CSS per formattare a video e per la STAMPA (nasconde i menu di WP)
+        echo '
+        <style>
+            .tc-report-wrap { background: #fff; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); max-width: 1000px; margin-top: 20px; }
+            .tc-print-btn { float: right; }
+            .tc-report-header { text-align: center; margin-bottom: 30px; font-family: serif; }
+            .tc-report-header h2, .tc-report-header h3 { margin: 5px 0; }
+            
+            /* Tabella Modello D */
+            .tc-modello-d { width: 100%; border-collapse: collapse; font-size: 12px; }
+            .tc-modello-d th, .tc-modello-d td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+            .tc-modello-d th { background: #f0f0f0; text-align: center; }
+            .tc-modello-d .section-title { background: #e0e0e0; font-weight: bold; text-align: center; }
+            .tc-modello-d .text-right { text-align: right; }
+            .tc-modello-d .totale-row { font-weight: bold; background: #f9f9f9; }
+            
+            /* Stampa PDF */
+            @media print {
+                #adminmenuwrap, #adminmenuback, #wpadminbar, .tc-no-print, .notice, #footer-upgrade { display: none !important; }
+                #wpcontent { margin-left: 0 !important; padding: 0 !important; }
+                .tc-report-wrap { box-shadow: none; max-width: 100%; padding: 0; }
+                @page { margin: 1cm; size: A4; }
+            }
+        </style>';
+
+        // CONTROLLI (NON STAMPABILI)
+        echo '<div class="tc-no-print" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">';
+        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> Stampa PDF</button></h1>';
+        
+        echo '<h2 class="nav-tab-wrapper">';
+        echo '<a href="?page=terzoconto-report&tab=modello_d" class="nav-tab ' . ($tab === 'modello_d' ? 'nav-tab-active' : '') . '">Modello D (Rendiconto per Cassa)</a>';
+        echo '<a href="?page=terzoconto-report&tab=raccolte" class="nav-tab ' . ($tab === 'raccolte' ? 'nav-tab-active' : '') . '">Report Raccolte Fondi</a>';
+        echo '</h2>';
+        echo '</div>'; // Fine area no-print
+
+
+        if ($tab === 'modello_d') {
+            // === RENDER MODELLO D ===
+            echo '<div class="tc-no-print" style="margin-bottom: 20px;">';
+            echo '<form method="get" style="display:inline-block; margin-right: 20px;">
+                    <input type="hidden" name="page" value="terzoconto-report" />
+                    <input type="hidden" name="tab" value="modello_d" />
+                    <strong>Anno di riferimento:</strong> <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />
+                    ' . get_submit_button('Aggiorna', 'secondary', '', false) . '
+                  </form>';
+            // Form esportazione backup (lo teniamo qui)
+            echo '<form method="post" style="display:inline-block;">';
+            wp_nonce_field('terzoconto_action_nonce');
+            echo '<input type="hidden" name="terzoconto_action" value="export_movimenti_csv" />';
+            submit_button('Backup Movimenti CSV', 'secondary', '', false);
+            echo '</form>';
+            echo '</div>';
+
+            $dati_modello = $this->report_service->get_dati_modello_d($year);
+            $titoli_aree = [
+                'A' => 'A) ATTIVITÀ DI INTERESSE GENERALE',
+                'B' => 'B) ATTIVITÀ DIVERSE',
+                'C' => 'C) ATTIVITÀ DI RACCOLTA FONDI',
+                'D' => 'D) ATTIVITÀ FINANZIARIE E PATRIMONIALI',
+                'E' => 'E) ATTIVITÀ DI SUPPORTO GENERALE'
+            ];
+
+            echo '<div class="tc-report-header">';
+            echo '<h2>Ente del Terzo Settore - ' . esc_html($nome_ente) . '</h2>';
+            echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
+            echo '<p>Modello D - Rendiconto Per Cassa (Decreto Min. Lavoro 5 marzo 2020)<br>Anno ' . esc_html((string)$year) . '</p>';
+            echo '</div>';
+
+            echo '<table class="tc-modello-d">';
+            echo '<thead>
+                    <tr><th colspan="3" style="font-size:14px;">USCITE</th><th colspan="3" style="font-size:14px;">ENTRATE</th></tr>
+                    <tr>
+                        <th width="35%">Voce</th><th width="10%">' . esc_html((string)$year) . '</th><th width="10%">' . esc_html((string)($year-1)) . '</th>
+                        <th width="35%">Voce</th><th width="10%">' . esc_html((string)$year) . '</th><th width="10%">' . esc_html((string)($year-1)) . '</th>
+                    </tr>
+                  </thead><tbody>';
+
+            $gran_totale_uscite_corr = 0; $gran_totale_uscite_prec = 0;
+            $gran_totale_entrate_corr = 0; $gran_totale_entrate_prec = 0;
+
+            foreach (['A', 'B', 'C', 'D', 'E'] as $area) {
+                echo '<tr><td colspan="6" class="section-title">' . esc_html($titoli_aree[$area]) . '</td></tr>';
+                
+                $uscite = $dati_modello[$area]['U'];
+                $entrate = $dati_modello[$area]['E'];
+                $max_rows = max(count($uscite), count($entrate));
+
+                $tot_u_corr = 0; $tot_u_prec = 0;
+                $tot_e_corr = 0; $tot_e_prec = 0;
+
+                for ($i = 0; $i < $max_rows; $i++) {
+                    echo '<tr>';
+                    // USCITE
+                    if (isset($uscite[$i])) {
+                        $u = $uscite[$i];
+                        echo '<td>' . $u['numero'] . ') ' . esc_html($u['nome']) . '</td>';
+                        echo '<td class="text-right">€ ' . number_format($u['corrente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . number_format($u['precedente'], 2, ',', '.') . '</td>';
+                        $tot_u_corr += $u['corrente']; $tot_u_prec += $u['precedente'];
+                    } else {
+                        echo '<td></td><td></td><td></td>';
+                    }
+
+                    // ENTRATE
+                    if (isset($entrate[$i])) {
+                        $e = $entrate[$i];
+                        echo '<td>' . $e['numero'] . ') ' . esc_html($e['nome']) . '</td>';
+                        echo '<td class="text-right">€ ' . number_format($e['corrente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . number_format($e['precedente'], 2, ',', '.') . '</td>';
+                        $tot_e_corr += $e['corrente']; $tot_e_prec += $e['precedente'];
+                    } else {
+                        echo '<td></td><td></td><td></td>';
+                    }
+                    echo '</tr>';
+                }
+
+                // Totale Sezione
+                $avanzo_corr = $tot_e_corr - $tot_u_corr;
+                $avanzo_prec = $tot_e_prec - $tot_u_prec;
+                echo '<tr class="totale-row">';
+                echo '<td>TOTALE USCITE '. $area .'</td><td class="text-right">€ ' . number_format($tot_u_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($tot_u_prec, 2, ',', '.') . '</td>';
+                echo '<td>TOTALE ENTRATE '. $area .'</td><td class="text-right">€ ' . number_format($tot_e_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($tot_e_prec, 2, ',', '.') . '</td>';
+                echo '</tr>';
+                echo '<tr class="totale-row"><td colspan="3"></td><td>Avanzo/Disavanzo (+/-)</td><td class="text-right">€ ' . number_format($avanzo_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($avanzo_prec, 2, ',', '.') . '</td></tr>';
+
+                $gran_totale_uscite_corr += $tot_u_corr; $gran_totale_uscite_prec += $tot_u_prec;
+                $gran_totale_entrate_corr += $tot_e_corr; $gran_totale_entrate_prec += $tot_e_prec;
+            }
+
+            // TOTALE GESTIONE CORRENTE
+            echo '<tr><td colspan="6" style="height:10px;"></td></tr>';
+            echo '<tr class="totale-row" style="background:#e0e0e0; font-size: 14px;">';
+            echo '<td>TOTALE GENERALE USCITE</td><td class="text-right">€ ' . number_format($gran_totale_uscite_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_uscite_prec, 2, ',', '.') . '</td>';
+            echo '<td>TOTALE GENERALE ENTRATE</td><td class="text-right">€ ' . number_format($gran_totale_entrate_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_entrate_prec, 2, ',', '.') . '</td>';
+            echo '</tr>';
+            echo '<tr class="totale-row" style="background:#e0e0e0; font-size: 14px;"><td colspan="3"></td><td>RISULTATO D\'ESERCIZIO (+/-)</td><td class="text-right">€ ' . number_format($gran_totale_entrate_corr - $gran_totale_uscite_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_entrate_prec - $gran_totale_uscite_prec, 2, ',', '.') . '</td></tr>';
+            
+            // SEZIONE CASSA
+            echo '<tr><td colspan="6" class="section-title" style="margin-top: 20px;">CASSA E BANCA</td></tr>';
+            $saldi = $this->report_service->get_saldi_conti($year);
+            $tot_cassa = 0;
+            foreach ($saldi as $c) {
+                echo '<tr><td colspan="3"></td><td>Saldo finale ' . esc_html($c['nome']) . ' al 31/12/' . $year . '</td><td class="text-right">€ ' . number_format($c['saldo'], 2, ',', '.') . '</td><td></td></tr>';
+                $tot_cassa += $c['saldo'];
+            }
+            echo '<tr class="totale-row"><td colspan="3"></td><td>TOTALE DISPONIBILITÀ LIQUIDE</td><td class="text-right">€ ' . number_format($tot_cassa, 2, ',', '.') . '</td><td></td></tr>';
+
+            echo '</tbody></table>';
+
+        } elseif ($tab === 'raccolte') {
+            // === RENDER RACCOLTA OCCASIONALE ===
+            
+            $raccolte_list = $this->raccolte->get_all();
+            $raccolta_id = isset($_GET['raccolta_id']) ? absint($_GET['raccolta_id']) : ($raccolte_list[0]['id'] ?? 0);
+
+            echo '<div class="tc-no-print" style="margin-bottom: 20px;">';
+            echo '<form method="get">
+                    <input type="hidden" name="page" value="terzoconto-report" />
+                    <input type="hidden" name="tab" value="raccolte" />
+                    <strong>Seleziona Raccolta:</strong> <select name="raccolta_id">';
+            foreach ($raccolte_list as $r) {
+                echo '<option value="' . $r['id'] . '" ' . selected($raccolta_id, $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
+            }
+            echo '</select> ' . get_submit_button('Mostra Report', 'secondary', '', false) . '
+                  </form></div>';
+
+            if ($raccolta_id > 0) {
+                $raccolta = $this->raccolte->find_by_id($raccolta_id);
+                $dati = $this->report_service->get_dati_raccolta($raccolta_id);
+
+                echo '<div class="tc-report-header">';
+                echo '<h4>RENDICONTO DELLA SINGOLA RACCOLTA PUBBLICA DI FONDI OCCASIONALE<br>REDATTO AI SENSI DELL’ART. 87, COMMA 6 E ART. 79 D.LGS. 117/2017</h4>';
+                echo '<h2>' . esc_html($nome_ente) . '</h2>';
+                echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
+                echo '<br><h3>RENDICONTO DELLA SINGOLA RACCOLTA FONDI</h3>';
+                echo '<p><strong>' . esc_html($raccolta['nome']) . '</strong><br>';
+                echo 'Durata della raccolta: dal ' . date('d/m/Y', strtotime($raccolta['data_inizio'])) . ' al ' . ($raccolta['data_fine'] ? date('d/m/Y', strtotime($raccolta['data_fine'])) : 'In corso') . '</p>';
+                echo '</div>';
+
+                echo '<div style="max-width: 600px; margin: 0 auto; font-family: sans-serif;">';
+                
+                // Entrate
+                echo '<p><strong>a) Proventi / entrate della raccolta fondi occasionale</strong></p>';
+                echo '<table width="100%" style="margin-left: 20px;">';
+                foreach ($dati['entrate'] as $e) {
+                    echo '<tr><td>- ' . esc_html($e['categoria']) . '</td><td align="right">€ ' . number_format($e['totale'], 2, ',', '.') . '</td></tr>';
+                }
+                echo '<tr><td align="right"><strong>Totale a)</strong></td><td align="right"><strong>€ ' . number_format($dati['totale_entrate'], 2, ',', '.') . '</strong></td></tr>';
+                echo '</table>';
+
+                // Uscite
+                echo '<p style="margin-top:20px;"><strong>b) Oneri / uscite per la raccolta fondi occasionale</strong></p>';
+                echo '<table width="100%" style="margin-left: 20px;">';
+                foreach ($dati['uscite'] as $u) {
+                    echo '<tr><td>- ' . esc_html($u['categoria']) . '</td><td align="right">€ ' . number_format($u['totale'], 2, ',', '.') . '</td></tr>';
+                }
+                echo '<tr><td align="right"><strong>Totale b)</strong></td><td align="right"><strong>€ ' . number_format($dati['totale_uscite'], 2, ',', '.') . '</strong></td></tr>';
+                echo '</table>';
+
+                // Risultato
+                echo '<h3 style="text-align:center; margin-top: 20px; padding: 10px; border-top: 1px solid #000; border-bottom: 1px solid #000;">Risultato della singola raccolta (a-b) &nbsp;&nbsp;&nbsp; € ' . number_format($dati['risultato'], 2, ',', '.') . '</h3>';
+
+                // Relazione Illustrativa
+                echo '<h4 style="margin-top: 40px;">RELAZIONE ILLUSTRATIVA</h4>';
+                echo '<div style="text-align: justify; line-height: 1.6;">';
+                echo wpautop(esc_html($raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'));
+                echo '</div>';
+                
+                echo '<div style="margin-top: 60px; text-align: right;">';
+                echo '<p>Data: ' . date('d/m/Y') . '</p>';
+                echo '<p>Firma del Rappresentante Legale<br>___________________________</p>';
+                echo '</div>';
+                
+                echo '</div>';
+            }
         }
-        echo '</tbody></table>';
 
-        echo '<form method="post">';
-        wp_nonce_field('terzoconto_action_nonce');
-        echo '<input type="hidden" name="terzoconto_action" value="export_movimenti_csv" />';
-        submit_button(__('Export CSV backup movimenti', 'terzo-conto'));
-        echo '</form>';
-        echo '</div>';
+        echo '</div>'; // Chiude wrap
     }
 
     private function render_movimento_form(array $categorie, array $conti, array $raccolte, array $anagrafiche, ?array $movimento = null): void {
