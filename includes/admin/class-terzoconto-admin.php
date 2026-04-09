@@ -1308,7 +1308,7 @@ class TerzoConto_Admin {
 
     private function get_movimento_stato_filter(): string {
         $nonce = sanitize_text_field(wp_unslash($_GET['terzoconto_filter_nonce'] ?? ''));
-        if ($nonce === '' || ! $this->security->verify_get_nonce('terzoconto_filter_nonce', 'terzoconto_filter_nonce')) {
+        if ($nonce === '' || ! $this->security->verify_get_nonce('terzoconto_filter_nonce', $nonce)) {
             return '';
         }
 
