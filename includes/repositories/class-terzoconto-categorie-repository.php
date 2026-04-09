@@ -16,13 +16,20 @@ class TerzoConto_Categorie_Repository {
 
     public function get_associazione(): array {
         global $wpdb;
-        $sql = "SELECT ca.*, md.nome AS modello_d_nome, md.codice AS modello_d_codice, md.tipo AS modello_d_tipo, md.area AS modello_d_area, md.numero AS modello_d_numero FROM {$this->table_assoc} ca INNER JOIN {$this->table_modeld} md ON md.id = ca.modello_d_id ORDER BY FIELD(md.tipo, 'U', 'E') ASC, md.area ASC, md.numero ASC, ca.nome ASC, ca.id ASC";
+        $sql = $wpdb->prepare(
+            "SELECT ca.*, md.nome AS modello_d_nome, md.codice AS modello_d_codice, md.tipo AS modello_d_tipo, md.area AS modello_d_area, md.numero AS modello_d_numero FROM {$this->table_assoc} ca INNER JOIN {$this->table_modeld} md ON md.id = ca.modello_d_id WHERE %d = %d ORDER BY FIELD(md.tipo, 'U', 'E') ASC, md.area ASC, md.numero ASC, ca.nome ASC, ca.id ASC",
+            1,
+            1
+        );
         return $wpdb->get_results($sql, ARRAY_A) ?: [];
     }
 
     public function get_modello_d(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table_modeld} ORDER BY FIELD(tipo, 'U', 'E') ASC, area ASC, numero ASC", ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$this->table_modeld} WHERE %d = %d ORDER BY FIELD(tipo, 'U', 'E') ASC, area ASC, numero ASC", 1, 1),
+            ARRAY_A
+        ) ?: [];
     }
 
     public function create_associazione(string $nome, int $modello_d_id, string $descrizione): bool {

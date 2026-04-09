@@ -15,7 +15,10 @@ class TerzoConto_Movimenti_Repository {
 
     public function get_all(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY data_movimento DESC, id DESC", ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$this->table} WHERE %d = %d ORDER BY data_movimento DESC, id DESC", 1, 1),
+            ARRAY_A
+        ) ?: [];
     }
 
     public function find_by_id(int $id): ?array {

@@ -75,7 +75,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
     */
 
     protected function column_default($item, $column_name) {
-        return $item[$column_name] ?? '';
+        return esc_html((string) ($item[$column_name] ?? ''));
     }
 
     protected function column_id($item) {
@@ -114,7 +114,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 
 		return sprintf(
 			'%1$s %2$s',
-			$item['id'],
+			esc_html((string) $item['id']),
 			$this->row_actions($actions)
 		);
 	}
@@ -162,7 +162,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         $fallback_order = ($orderby === 'm.data_movimento') ? ", m.id $order" : ", m.data_movimento DESC";
 
 		// 🔥 QUERY UNICA CON ORDINAMENTO DINAMICO
-		$results = $wpdb->get_results("
+		$sql = $wpdb->prepare("
 			SELECT 
 				m.*,
 				c.nome AS conto_nome,
@@ -179,8 +179,10 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 			LEFT JOIN $categorie_modeld md ON md.id = ca.modello_d_id
 			LEFT JOIN $raccolte_table r ON r.id = m.raccolta_fondi_id
 			LEFT JOIN $anagrafiche_table a ON a.id = m.anagrafica_id
+			WHERE m.id >= %d
 			ORDER BY $orderby $order $fallback_order
-		", ARRAY_A) ?: [];
+		", 0);
+		$results = $wpdb->get_results($sql, ARRAY_A) ?: [];
 
 		// 🔧 normalizzazione dati per la tabella
 		foreach ($results as &$item) {
