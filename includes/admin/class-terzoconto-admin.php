@@ -119,6 +119,36 @@ class TerzoConto_Admin {
 					add_settings_error('terzoconto', 'import_missing_file', 'File mancante', 'error');
 					return;
 				}
+				if (! isset($_FILES['csv_file']['error']) || (int) $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+					add_settings_error('terzoconto', 'import_upload_error', 'Errore upload file', 'error');
+					return;
+				}
+				if (! isset($_FILES['csv_file']['size']) || (int) $_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
+					add_settings_error('terzoconto', 'import_file_too_large', 'File troppo grande (max 2MB)', 'error');
+					return;
+				}
+				$file_name = sanitize_file_name(wp_unslash((string) ($_FILES['csv_file']['name'] ?? '')));
+				$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
+				if ($file_ext !== 'csv') {
+					add_settings_error('terzoconto', 'import_invalid_extension', 'Estensione file non valida (solo .csv)', 'error');
+					return;
+				}
+				$allowed_mimes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+				$wp_filetype = wp_check_filetype($file_name);
+				$mime_ok_wp = in_array((string) ($wp_filetype['type'] ?? ''), $allowed_mimes, true);
+				$mime_ok_finfo = false;
+				if (function_exists('finfo_open')) {
+					$finfo = finfo_open(FILEINFO_MIME_TYPE);
+					if ($finfo) {
+						$detected_mime = (string) finfo_file($finfo, $_FILES['csv_file']['tmp_name']);
+						finfo_close($finfo);
+						$mime_ok_finfo = in_array($detected_mime, $allowed_mimes, true);
+					}
+				}
+				if (! $mime_ok_wp && ! $mime_ok_finfo) {
+					add_settings_error('terzoconto', 'import_invalid_mime', 'Tipo file non valido', 'error');
+					return;
+				}
 
 				$provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? 'generico'));
 
@@ -1301,6 +1331,36 @@ class TerzoConto_Admin {
 			add_settings_error('terzoconto', 'import_missing_file', 'File mancante', 'error');
 			return;
 		}
+		if (! isset($_FILES['csv_file']['error']) || (int) $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+			add_settings_error('terzoconto', 'import_upload_error', 'Errore upload file', 'error');
+			return;
+		}
+		if (! isset($_FILES['csv_file']['size']) || (int) $_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
+			add_settings_error('terzoconto', 'import_file_too_large', 'File troppo grande (max 2MB)', 'error');
+			return;
+		}
+		$file_name = sanitize_file_name(wp_unslash((string) ($_FILES['csv_file']['name'] ?? '')));
+		$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
+		if ($file_ext !== 'csv') {
+			add_settings_error('terzoconto', 'import_invalid_extension', 'Estensione file non valida (solo .csv)', 'error');
+			return;
+		}
+		$allowed_mimes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
+		$wp_filetype = wp_check_filetype($file_name);
+		$mime_ok_wp = in_array((string) ($wp_filetype['type'] ?? ''), $allowed_mimes, true);
+		$mime_ok_finfo = false;
+		if (function_exists('finfo_open')) {
+			$finfo = finfo_open(FILEINFO_MIME_TYPE);
+			if ($finfo) {
+				$detected_mime = (string) finfo_file($finfo, $_FILES['csv_file']['tmp_name']);
+				finfo_close($finfo);
+				$mime_ok_finfo = in_array($detected_mime, $allowed_mimes, true);
+			}
+		}
+		if (! $mime_ok_wp && ! $mime_ok_finfo) {
+			add_settings_error('terzoconto', 'import_invalid_mime', 'Tipo file non valido', 'error');
+			return;
+		}
 
 		$provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? 'generico'));
 
@@ -1757,16 +1817,20 @@ class TerzoConto_Admin {
         $fields['updated_at'] = current_time('mysql');
 
         $set_parts = [];
+        $set_values = [];
         foreach ($fields as $col => $val) {
             if ($col === 'updated_at') {
-                $set_parts[] = "$col = '" . esc_sql($val) . "'";
+                $set_parts[] = "$col = %s";
+                $set_values[] = (string) $val;
             } else {
-                $set_parts[] = "$col = " . (int)$val;
+                $set_parts[] = "$col = %d";
+                $set_values[] = (int) $val;
             }
         }
 
-        $ids_sql = implode(',', $clean_ids);
-        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_sql})";
+        $ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
+        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_placeholders})";
+        $sql = $wpdb->prepare($sql, array_merge($set_values, $clean_ids));
         
         // 5. Esecuzione della Query
         $updated = $wpdb->query($sql);
