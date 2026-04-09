@@ -6,16 +6,28 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Installer {
     private const DB_VERSION_OPTION = 'terzoconto_db_version';
+    private const MIGRATION_LOCK_OPTION = 'terzoconto_migrating';
 
     public static function install_or_update(): void {
-        $current_version = get_option(self::DB_VERSION_OPTION, '0.0.0');
-
-        if (version_compare((string) $current_version, TERZOCONTO_DB_VERSION, '>=')) {
-            return;
-        }
+        $current_version = get_option(self::DB_VERSION_OPTION, false);
 
         try {
-            self::maybe_create_tables();
+            if ($current_version === false) {
+                self::maybe_create_tables();
+                self::seed_defaults();
+                self::register_attachment_taxonomy();
+
+                update_option(self::DB_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
+
+                return;
+            }
+
+            if (version_compare((string) $current_version, TERZOCONTO_DB_VERSION, '>=')) {
+                self::register_attachment_taxonomy();
+
+                return;
+            }
+
             self::run_migrations((string) $current_version);
             self::seed_defaults();
             self::register_attachment_taxonomy();
@@ -41,13 +53,80 @@ class TerzoConto_Installer {
         }
     }
 
+    private static function get_migrations(): array {
+        return [
+            '1.1.0' => static function (): void {
+                global $wpdb;
+
+                $table = $wpdb->prefix . 'terzoconto_movimenti';
+
+                if (! self::table_exists($table)) {
+                    return;
+                }
+
+                if (! self::column_exists($table, 'updated_at')) {
+                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at");
+                    if ($result === false) {
+                        throw new RuntimeException(sprintf('Unable to add column updated_at to %s: %s', $table, $wpdb->last_error));
+                    }
+                }
+
+                if (! self::index_exists($table, 'anno_progressivo')) {
+                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX anno_progressivo (anno, progressivo_annuale)");
+                    if ($result === false) {
+                        throw new RuntimeException(sprintf('Unable to add index anno_progressivo to %s: %s', $table, $wpdb->last_error));
+                    }
+                }
+            },
+            '1.2.0' => static function (): void {
+                global $wpdb;
+
+                $table = $wpdb->prefix . 'terzoconto_anagrafiche';
+
+                if (! self::table_exists($table)) {
+                    return;
+                }
+
+                if (! self::column_exists($table, 'codice_fiscale')) {
+                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo");
+                    if ($result === false) {
+                        throw new RuntimeException(sprintf('Unable to add column codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                    }
+                }
+
+                if (! self::index_exists($table, 'codice_fiscale')) {
+                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX codice_fiscale (codice_fiscale)");
+                    if ($result === false) {
+                        throw new RuntimeException(sprintf('Unable to add index codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                    }
+                }
+            },
+        ];
+    }
+
     private static function run_migrations(string $current_version): void {
-        if (version_compare($current_version, '1.1.0', '<')) {
-            // Future migration placeholder for 1.1.0.
+        $lock_acquired = add_option(self::MIGRATION_LOCK_OPTION, 1, '', 'no');
+
+        if (! $lock_acquired) {
+            return;
         }
 
-        if (version_compare($current_version, '1.2.0', '<')) {
-            // Future migration placeholder for 1.2.0.
+        try {
+            $migrations = self::get_migrations();
+            ksort($migrations, SORT_NATURAL);
+
+            foreach ($migrations as $version => $migration) {
+                if (version_compare($current_version, $version, '<')) {
+                    try {
+                        $migration();
+                    } catch (Throwable $exception) {
+                        error_log(sprintf('[TerzoConto] Migration %s failed: %s', $version, $exception->getMessage()));
+                        throw $exception;
+                    }
+                }
+            }
+        } finally {
+            delete_option(self::MIGRATION_LOCK_OPTION);
         }
     }
 
@@ -58,6 +137,32 @@ class TerzoConto_Installer {
         $found = $wpdb->get_var($sql);
 
         return $found === $table_name;
+    }
+
+    private static function column_exists(string $table_name, string $column_name): bool {
+        global $wpdb;
+
+        if (! self::table_exists($table_name)) {
+            return false;
+        }
+
+        $sql = $wpdb->prepare("SHOW COLUMNS FROM {$table_name} LIKE %s", $column_name);
+        $result = $wpdb->get_var($sql);
+
+        return $result === $column_name;
+    }
+
+    private static function index_exists(string $table_name, string $index_name): bool {
+        global $wpdb;
+
+        if (! self::table_exists($table_name)) {
+            return false;
+        }
+
+        $sql = $wpdb->prepare("SHOW INDEX FROM {$table_name} WHERE Key_name = %s", $index_name);
+        $result = $wpdb->get_var($sql);
+
+        return $result === $index_name;
     }
 
     private static function get_schema_statements(string $prefix, string $charset_collate): array {
