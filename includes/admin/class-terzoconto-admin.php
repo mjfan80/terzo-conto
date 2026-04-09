@@ -770,7 +770,7 @@ class TerzoConto_Admin {
 				if ($is_dupe) $status[] = 'Duplicato';
 				if (! $status) $status[] = 'OK';
 
-				echo '<td>' . implode(' | ', $status) . '</td>';
+				echo '<td>' . esc_html(implode(' | ', $status)) . '</td>';
 
 				echo '</tr>';
 			}
@@ -855,8 +855,8 @@ class TerzoConto_Admin {
         echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> Stampa PDF</button></h1>';
         
         echo '<h2 class="nav-tab-wrapper">';
-        echo '<a href="?page=terzoconto-report&tab=modello_d" class="nav-tab ' . ($tab === 'modello_d' ? 'nav-tab-active' : '') . '">Modello D (Rendiconto per Cassa)</a>';
-        echo '<a href="?page=terzoconto-report&tab=raccolte" class="nav-tab ' . ($tab === 'raccolte' ? 'nav-tab-active' : '') . '">Report Raccolte Fondi</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">Modello D (Rendiconto per Cassa)</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">Report Raccolte Fondi</a>';
         echo '</h2>';
         echo '</div>'; // Fine area no-print
 
@@ -920,7 +920,7 @@ class TerzoConto_Admin {
                     // USCITE
                     if (isset($uscite[$i])) {
                         $u = $uscite[$i];
-                        echo '<td>' . $u['numero'] . ') ' . esc_html($u['nome']) . '</td>';
+                        echo '<td>' . esc_html((string) $u['numero']) . ') ' . esc_html($u['nome']) . '</td>';
                         echo '<td class="text-right">€ ' . number_format($u['corrente'], 2, ',', '.') . '</td>';
                         echo '<td class="text-right">€ ' . number_format($u['precedente'], 2, ',', '.') . '</td>';
                         $tot_u_corr += $u['corrente']; $tot_u_prec += $u['precedente'];
@@ -931,7 +931,7 @@ class TerzoConto_Admin {
                     // ENTRATE
                     if (isset($entrate[$i])) {
                         $e = $entrate[$i];
-                        echo '<td>' . $e['numero'] . ') ' . esc_html($e['nome']) . '</td>';
+                        echo '<td>' . esc_html((string) $e['numero']) . ') ' . esc_html($e['nome']) . '</td>';
                         echo '<td class="text-right">€ ' . number_format($e['corrente'], 2, ',', '.') . '</td>';
                         echo '<td class="text-right">€ ' . number_format($e['precedente'], 2, ',', '.') . '</td>';
                         $tot_e_corr += $e['corrente']; $tot_e_prec += $e['precedente'];
@@ -945,10 +945,10 @@ class TerzoConto_Admin {
                 $avanzo_corr = $tot_e_corr - $tot_u_corr;
                 $avanzo_prec = $tot_e_prec - $tot_u_prec;
                 echo '<tr class="totale-row">';
-                echo '<td>TOTALE USCITE '. $area .'</td><td class="text-right">€ ' . number_format($tot_u_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($tot_u_prec, 2, ',', '.') . '</td>';
-                echo '<td>TOTALE ENTRATE '. $area .'</td><td class="text-right">€ ' . number_format($tot_e_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($tot_e_prec, 2, ',', '.') . '</td>';
+                echo '<td>TOTALE USCITE '. esc_html($area) .'</td><td class="text-right">€ ' . esc_html(number_format($tot_u_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($tot_u_prec, 2, ',', '.')) . '</td>';
+                echo '<td>TOTALE ENTRATE '. esc_html($area) .'</td><td class="text-right">€ ' . esc_html(number_format($tot_e_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($tot_e_prec, 2, ',', '.')) . '</td>';
                 echo '</tr>';
-                echo '<tr class="totale-row"><td colspan="3"></td><td>Avanzo/Disavanzo (+/-)</td><td class="text-right">€ ' . number_format($avanzo_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($avanzo_prec, 2, ',', '.') . '</td></tr>';
+                echo '<tr class="totale-row"><td colspan="3"></td><td>Avanzo/Disavanzo (+/-)</td><td class="text-right">€ ' . esc_html(number_format($avanzo_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($avanzo_prec, 2, ',', '.')) . '</td></tr>';
 
                 $gran_totale_uscite_corr += $tot_u_corr; $gran_totale_uscite_prec += $tot_u_prec;
                 $gran_totale_entrate_corr += $tot_e_corr; $gran_totale_entrate_prec += $tot_e_prec;
@@ -957,20 +957,20 @@ class TerzoConto_Admin {
             // TOTALE GESTIONE CORRENTE
             echo '<tr><td colspan="6" style="height:10px;"></td></tr>';
             echo '<tr class="totale-row" style="background:#e0e0e0; font-size: 14px;">';
-            echo '<td>TOTALE GENERALE USCITE</td><td class="text-right">€ ' . number_format($gran_totale_uscite_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_uscite_prec, 2, ',', '.') . '</td>';
-            echo '<td>TOTALE GENERALE ENTRATE</td><td class="text-right">€ ' . number_format($gran_totale_entrate_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_entrate_prec, 2, ',', '.') . '</td>';
+            echo '<td>TOTALE GENERALE USCITE</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_uscite_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_uscite_prec, 2, ',', '.')) . '</td>';
+            echo '<td>TOTALE GENERALE ENTRATE</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_entrate_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_entrate_prec, 2, ',', '.')) . '</td>';
             echo '</tr>';
-            echo '<tr class="totale-row" style="background:#e0e0e0; font-size: 14px;"><td colspan="3"></td><td>RISULTATO D\'ESERCIZIO (+/-)</td><td class="text-right">€ ' . number_format($gran_totale_entrate_corr - $gran_totale_uscite_corr, 2, ',', '.') . '</td><td class="text-right">€ ' . number_format($gran_totale_entrate_prec - $gran_totale_uscite_prec, 2, ',', '.') . '</td></tr>';
+            echo '<tr class="totale-row" style="background:#e0e0e0; font-size: 14px;"><td colspan="3"></td><td>RISULTATO D\'ESERCIZIO (+/-)</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_entrate_corr - $gran_totale_uscite_corr, 2, ',', '.')) . '</td><td class="text-right">€ ' . esc_html(number_format($gran_totale_entrate_prec - $gran_totale_uscite_prec, 2, ',', '.')) . '</td></tr>';
             
             // SEZIONE CASSA
             echo '<tr><td colspan="6" class="section-title" style="margin-top: 20px;">CASSA E BANCA</td></tr>';
             $saldi = $this->report_service->get_saldi_conti($year);
             $tot_cassa = 0;
             foreach ($saldi as $c) {
-                echo '<tr><td colspan="3"></td><td>Saldo finale ' . esc_html($c['nome']) . ' al 31/12/' . $year . '</td><td class="text-right">€ ' . number_format($c['saldo'], 2, ',', '.') . '</td><td></td></tr>';
+                echo '<tr><td colspan="3"></td><td>Saldo finale ' . esc_html($c['nome']) . ' al 31/12/' . esc_html((string) $year) . '</td><td class="text-right">€ ' . esc_html(number_format($c['saldo'], 2, ',', '.')) . '</td><td></td></tr>';
                 $tot_cassa += $c['saldo'];
             }
-            echo '<tr class="totale-row"><td colspan="3"></td><td>TOTALE DISPONIBILITÀ LIQUIDE</td><td class="text-right">€ ' . number_format($tot_cassa, 2, ',', '.') . '</td><td></td></tr>';
+            echo '<tr class="totale-row"><td colspan="3"></td><td>TOTALE DISPONIBILITÀ LIQUIDE</td><td class="text-right">€ ' . esc_html(number_format($tot_cassa, 2, ',', '.')) . '</td><td></td></tr>';
 
             echo '</tbody></table>';
 
@@ -986,7 +986,7 @@ class TerzoConto_Admin {
                     <input type="hidden" name="tab" value="raccolte" />
                     <strong>Seleziona Raccolta:</strong> <select name="raccolta_id">';
             foreach ($raccolte_list as $r) {
-                echo '<option value="' . $r['id'] . '" ' . selected($raccolta_id, $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
+                echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
             echo '</select> ' . get_submit_button('Mostra Report', 'secondary', '', false) . '
                   </form></div>';
@@ -1001,7 +1001,7 @@ class TerzoConto_Admin {
                 echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
                 echo '<br><h3>RENDICONTO DELLA SINGOLA RACCOLTA FONDI</h3>';
                 echo '<p><strong>' . esc_html($raccolta['nome']) . '</strong><br>';
-                echo 'Durata della raccolta: dal ' . date('d/m/Y', strtotime($raccolta['data_inizio'])) . ' al ' . ($raccolta['data_fine'] ? date('d/m/Y', strtotime($raccolta['data_fine'])) : 'In corso') . '</p>';
+                echo 'Durata della raccolta: dal ' . esc_html(date('d/m/Y', strtotime($raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? date('d/m/Y', strtotime($raccolta['data_fine'])) : 'In corso') . '</p>';
                 echo '</div>';
 
                 echo '<div style="max-width: 600px; margin: 0 auto; font-family: sans-serif;">';
@@ -1010,22 +1010,22 @@ class TerzoConto_Admin {
                 echo '<p><strong>a) Proventi / entrate della raccolta fondi occasionale</strong></p>';
                 echo '<table width="100%" style="margin-left: 20px;">';
                 foreach ($dati['entrate'] as $e) {
-                    echo '<tr><td>- ' . esc_html($e['categoria']) . '</td><td align="right">€ ' . number_format($e['totale'], 2, ',', '.') . '</td></tr>';
+                    echo '<tr><td>- ' . esc_html($e['categoria']) . '</td><td align="right">€ ' . esc_html(number_format($e['totale'], 2, ',', '.')) . '</td></tr>';
                 }
-                echo '<tr><td align="right"><strong>Totale a)</strong></td><td align="right"><strong>€ ' . number_format($dati['totale_entrate'], 2, ',', '.') . '</strong></td></tr>';
+                echo '<tr><td align="right"><strong>Totale a)</strong></td><td align="right"><strong>€ ' . esc_html(number_format($dati['totale_entrate'], 2, ',', '.')) . '</strong></td></tr>';
                 echo '</table>';
 
                 // Uscite
                 echo '<p style="margin-top:20px;"><strong>b) Oneri / uscite per la raccolta fondi occasionale</strong></p>';
                 echo '<table width="100%" style="margin-left: 20px;">';
                 foreach ($dati['uscite'] as $u) {
-                    echo '<tr><td>- ' . esc_html($u['categoria']) . '</td><td align="right">€ ' . number_format($u['totale'], 2, ',', '.') . '</td></tr>';
+                    echo '<tr><td>- ' . esc_html($u['categoria']) . '</td><td align="right">€ ' . esc_html(number_format($u['totale'], 2, ',', '.')) . '</td></tr>';
                 }
-                echo '<tr><td align="right"><strong>Totale b)</strong></td><td align="right"><strong>€ ' . number_format($dati['totale_uscite'], 2, ',', '.') . '</strong></td></tr>';
+                echo '<tr><td align="right"><strong>Totale b)</strong></td><td align="right"><strong>€ ' . esc_html(number_format($dati['totale_uscite'], 2, ',', '.')) . '</strong></td></tr>';
                 echo '</table>';
 
                 // Risultato
-                echo '<h3 style="text-align:center; margin-top: 20px; padding: 10px; border-top: 1px solid #000; border-bottom: 1px solid #000;">Risultato della singola raccolta (a-b) &nbsp;&nbsp;&nbsp; € ' . number_format($dati['risultato'], 2, ',', '.') . '</h3>';
+                echo '<h3 style="text-align:center; margin-top: 20px; padding: 10px; border-top: 1px solid #000; border-bottom: 1px solid #000;">Risultato della singola raccolta (a-b) &nbsp;&nbsp;&nbsp; € ' . esc_html(number_format($dati['risultato'], 2, ',', '.')) . '</h3>';
 
                 // Relazione Illustrativa
                 echo '<h4 style="margin-top: 40px;">RELAZIONE ILLUSTRATIVA</h4>';
@@ -1034,7 +1034,7 @@ class TerzoConto_Admin {
                 echo '</div>';
                 
                 echo '<div style="margin-top: 60px; text-align: right;">';
-                echo '<p>Data: ' . date('d/m/Y') . '</p>';
+                echo '<p>Data: ' . esc_html(date('d/m/Y')) . '</p>';
                 echo '<p>Firma del Rappresentante Legale<br>___________________________</p>';
                 echo '</div>';
                 
