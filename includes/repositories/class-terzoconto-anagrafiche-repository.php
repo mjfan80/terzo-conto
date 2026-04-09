@@ -89,7 +89,10 @@ class TerzoConto_Anagrafiche_Repository {
 
         $normalized = trim($term);
         if ($normalized === '') {
-            return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY cognome ASC, nome ASC, ragione_sociale ASC LIMIT 100", ARRAY_A) ?: [];
+            return $wpdb->get_results(
+                $wpdb->prepare("SELECT * FROM {$this->table} ORDER BY cognome ASC, nome ASC, ragione_sociale ASC LIMIT %d", 100),
+                ARRAY_A
+            ) ?: [];
         }
 
         $like = '%' . $wpdb->esc_like($normalized) . '%';

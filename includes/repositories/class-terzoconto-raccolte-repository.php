@@ -16,7 +16,10 @@ class TerzoConto_Raccolte_Repository {
 
     public function get_all(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY (stato = 'aperta') DESC, data_inizio DESC", ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$this->table} WHERE %d = %d ORDER BY (stato = 'aperta') DESC, data_inizio DESC", 1, 1),
+            ARRAY_A
+        ) ?: [];
     }
 
     public function find_by_id(int $id): ?array {

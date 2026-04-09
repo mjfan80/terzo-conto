@@ -16,7 +16,10 @@ class TerzoConto_Conti_Repository {
 
     public function get_all(): array {
         global $wpdb;
-        return $wpdb->get_results("SELECT * FROM {$this->table} ORDER BY nome ASC", ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$this->table} WHERE %d = %d ORDER BY nome ASC", 1, 1),
+            ARRAY_A
+        ) ?: [];
     }
 
     public function find_by_id(int $id): ?array {

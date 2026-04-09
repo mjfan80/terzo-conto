@@ -17,7 +17,10 @@ class TerzoConto_Report_Service {
         $cat_mod = $wpdb->prefix . 'terzoconto_categorie_modello_d';
 
         // Prendiamo TUTTE le voci del Modello D ufficiale (devono esserci tutte anche se a zero)
-        $voci = $wpdb->get_results("SELECT * FROM {$cat_mod} ORDER BY area ASC, tipo DESC, numero ASC", ARRAY_A);
+        $voci = $wpdb->get_results(
+            $wpdb->prepare("SELECT * FROM {$cat_mod} WHERE %d = %d ORDER BY area ASC, tipo DESC, numero ASC", 1, 1),
+            ARRAY_A
+        );
 
         // Calcoliamo i totali per l'anno corrente
         $totali_corrente = $this->get_somme_per_anno($year);
