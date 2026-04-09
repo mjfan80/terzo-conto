@@ -28,7 +28,12 @@ class TerzoConto_Installer {
                 return;
             }
 
-            self::run_migrations((string) $current_version);
+            $migrations_ran = self::run_migrations((string) $current_version);
+
+            if (! $migrations_ran) {
+                return;
+            }
+
             self::seed_defaults();
             self::register_attachment_taxonomy();
 
@@ -104,11 +109,11 @@ class TerzoConto_Installer {
         ];
     }
 
-    private static function run_migrations(string $current_version): void {
+    private static function run_migrations(string $current_version): bool {
         $lock_acquired = add_option(self::MIGRATION_LOCK_OPTION, 1, '', 'no');
 
         if (! $lock_acquired) {
-            return;
+            return false;
         }
 
         try {
@@ -125,6 +130,8 @@ class TerzoConto_Installer {
                     }
                 }
             }
+
+            return true;
         } finally {
             delete_option(self::MIGRATION_LOCK_OPTION);
         }
