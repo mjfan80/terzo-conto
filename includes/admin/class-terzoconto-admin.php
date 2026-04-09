@@ -77,11 +77,10 @@ class TerzoConto_Admin {
                 return;
             }
         } elseif ($action === 'annulla_movimento') {
-            // Usa la verifica GET per i link della tabella
-            if (! $this->security->verify_get_nonce('terzoconto_action_nonce')) {
-                return;
-            }
-        } else {
+		    if (! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
+		        return;
+		    }
+		} else {
             // Azioni standard POST (inserimento movimento, creazione conto, ecc...)
             if (! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
                 return;
@@ -114,62 +113,7 @@ class TerzoConto_Admin {
                 break;
 
 			case 'import_preview':
-
-				if (! isset($_FILES['csv_file']) || empty($_FILES['csv_file']['tmp_name'])) {
-					add_settings_error('terzoconto', 'import_missing_file', 'File mancante', 'error');
-					return;
-				}
-				if (! isset($_FILES['csv_file']['error']) || (int) $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-					add_settings_error('terzoconto', 'import_upload_error', 'Errore upload file', 'error');
-					return;
-				}
-				if (! isset($_FILES['csv_file']['size']) || (int) $_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
-					add_settings_error('terzoconto', 'import_file_too_large', 'File troppo grande (max 2MB)', 'error');
-					return;
-				}
-				$file_name = sanitize_file_name(wp_unslash((string) ($_FILES['csv_file']['name'] ?? '')));
-				$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
-				if ($file_ext !== 'csv') {
-					add_settings_error('terzoconto', 'import_invalid_extension', 'Estensione file non valida (solo .csv)', 'error');
-					return;
-				}
-				$allowed_mimes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
-				$wp_filetype = wp_check_filetype($file_name);
-				$mime_ok_wp = in_array((string) ($wp_filetype['type'] ?? ''), $allowed_mimes, true);
-				$mime_ok_finfo = false;
-				if (function_exists('finfo_open')) {
-					$finfo = finfo_open(FILEINFO_MIME_TYPE);
-					if ($finfo) {
-						$detected_mime = (string) finfo_file($finfo, $_FILES['csv_file']['tmp_name']);
-						finfo_close($finfo);
-						$mime_ok_finfo = in_array($detected_mime, $allowed_mimes, true);
-					}
-				}
-				if (! $mime_ok_wp && ! $mime_ok_finfo) {
-					add_settings_error('terzoconto', 'import_invalid_mime', 'Tipo file non valido', 'error');
-					return;
-				}
-
-				$provider = sanitize_text_field(wp_unslash($_POST['provider'] ?? 'generico'));
-
-				$rows = $this->import_service->parse_csv($_FILES['csv_file']['tmp_name'], $provider);
-
-				if ($rows === []) {
-					add_settings_error('terzoconto', 'import_empty', 'CSV vuoto', 'error');
-					return;
-				}
-
-				$valid_rows = $this->import_service->get_valid_rows($rows);
-				$duplicates = $this->import_service->detect_duplicates($rows, $this->movimenti->get_all());
-
-				$this->submitted_movimento = [
-					'rows' => $rows,
-					'valid_rows' => $valid_rows,
-					'duplicates' => $duplicates,
-				];
-
-				add_settings_error('terzoconto', 'import_ok', 'Anteprima generata', 'updated');
-
+				$this->handle_import_preview();
 				break;
 
 			case 'import_commit':
@@ -649,7 +593,7 @@ class TerzoConto_Admin {
         }
 
 
-		$preview = $this->submitted_movimento;
+		$preview = get_transient($this->get_import_preview_transient_key());
 
 		$categorie = $this->categorie->get_associazione();
 		$conti = $this->conti->get_all();
@@ -1374,7 +1318,7 @@ class TerzoConto_Admin {
 		$valid_rows = $this->import_service->get_valid_rows($rows);
 		$duplicates = $this->import_service->detect_duplicates($rows, $this->movimenti->get_all());
 
-		update_option('terzoconto_import_preview', [
+		set_transient($this->get_import_preview_transient_key(), [
 			'rows' => $rows,
 			'valid_rows' => $valid_rows,
 			'duplicates' => $duplicates,
@@ -1448,7 +1392,7 @@ class TerzoConto_Admin {
 	}
 
     private function get_import_preview_transient_key(): string {
-		return 'terzoconto_import_preview';
+		return 'terzoconto_import_preview_' . get_current_user_id();
 	}
 
     private function handle_create_conto(): void {
