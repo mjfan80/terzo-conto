@@ -1757,16 +1757,20 @@ class TerzoConto_Admin {
         $fields['updated_at'] = current_time('mysql');
 
         $set_parts = [];
+        $set_values = [];
         foreach ($fields as $col => $val) {
             if ($col === 'updated_at') {
-                $set_parts[] = "$col = '" . esc_sql($val) . "'";
+                $set_parts[] = "$col = %s";
+                $set_values[] = (string) $val;
             } else {
-                $set_parts[] = "$col = " . (int)$val;
+                $set_parts[] = "$col = %d";
+                $set_values[] = (int) $val;
             }
         }
 
-        $ids_sql = implode(',', $clean_ids);
-        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_sql})";
+        $ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
+        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_placeholders})";
+        $sql = $wpdb->prepare($sql, array_merge($set_values, $clean_ids));
         
         // 5. Esecuzione della Query
         $updated = $wpdb->query($sql);

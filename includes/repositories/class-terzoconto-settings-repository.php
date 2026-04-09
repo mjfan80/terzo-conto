@@ -14,7 +14,10 @@ class TerzoConto_Settings_Repository {
 
     public function get(): ?array {
         global $wpdb;
-        $row = $wpdb->get_row("SELECT * FROM {$this->table} ORDER BY id ASC LIMIT 1", ARRAY_A);
+        $row = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM {$this->table} ORDER BY id ASC LIMIT %d", 1),
+            ARRAY_A
+        );
         return is_array($row) ? $row : null;
     }
 

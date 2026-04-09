@@ -222,9 +222,14 @@ class TerzoConto_Activator {
             );
         }
 
-        $categorie_assoc_count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$prefix}terzoconto_categorie_associazione");
+        $categorie_assoc_count = (int) $wpdb->get_var(
+            $wpdb->prepare("SELECT COUNT(*) FROM {$prefix}terzoconto_categorie_associazione WHERE %d = %d", 1, 1)
+        );
         if ($categorie_assoc_count === 0) {
-            $model_d_rows = $wpdb->get_results("SELECT id, nome FROM {$prefix}terzoconto_categorie_modello_d ORDER BY ordinamento ASC", ARRAY_A) ?: [];
+            $model_d_rows = $wpdb->get_results(
+                $wpdb->prepare("SELECT id, nome FROM {$prefix}terzoconto_categorie_modello_d WHERE %d = %d ORDER BY ordinamento ASC", 1, 1),
+                ARRAY_A
+            ) ?: [];
             foreach ($model_d_rows as $row) {
                 $wpdb->insert(
                     "{$prefix}terzoconto_categorie_associazione",
