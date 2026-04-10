@@ -1221,9 +1221,9 @@ class TerzoConto_Admin {
     }
 
     private function get_movimento_stato_filter(): string {
-        if (! $this->security->verify_get_nonce('terzoconto_filter_nonce', 'terzoconto_filter_nonce')) {
-            return '';
-        }
+        if (! $this->security->verify_get_nonce('terzoconto_filter_nonce')) {
+		    return '';
+		}
 
         $stato = sanitize_text_field(wp_unslash($_GET['stato_movimento'] ?? ''));
         return in_array($stato, ['attivo', 'annullato'], true) ? $stato : '';
