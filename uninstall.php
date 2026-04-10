@@ -9,6 +9,10 @@ if (! defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 global $wpdb;
 
 // Rimozione esplicita dei termini taxonomy del plugin (e relative relazioni).
@@ -35,9 +39,20 @@ $term_taxonomy_ids = $wpdb->get_col(
         $taxonomy
     )
 );
+$term_ids = $wpdb->get_col(
+    $wpdb->prepare(
+        "SELECT term_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s",
+        $taxonomy
+    )
+);
 
 if (! empty($term_taxonomy_ids)) {
     $ids = implode(',', array_map('intval', $term_taxonomy_ids));
+
+    if (! empty($term_ids)) {
+        $meta_ids = implode(',', array_map('intval', $term_ids));
+        $wpdb->query("DELETE FROM {$wpdb->termmeta} WHERE term_id IN ($meta_ids)");
+    }
 
     // Cancella relazioni
     $wpdb->query("DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ($ids)");
