@@ -78,7 +78,11 @@ class TerzoConto_Admin {
                 return;
             }
         } elseif ($action === 'annulla_movimento') {
-		    if (! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
+            $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce'] ?? ''));
+		    if (
+                (isset($_GET['terzoconto_action']) && ! isset($_POST['terzoconto_action']) && ! $this->security->verify_get_nonce('terzoconto_action_nonce', $nonce))
+                || (! isset($_GET['terzoconto_action']) && ! $this->security->verify_post_nonce('terzoconto_action_nonce'))
+            ) {
 		        return;
 		    }
 		} else {
@@ -185,7 +189,7 @@ class TerzoConto_Admin {
             }));
         }
 
-        echo '<div class="wrap"><h1>TerzoConto - ' . esc_html__('Movimenti', 'terzo-conto') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('TerzoConto - Movimenti', 'terzo-conto') . '</h1>';
         $this->render_movimenti_notice(); 
 		settings_errors('terzoconto');
         $this->render_movimento_form($categorie, $conti, $raccolte, $anagrafiche, $movimento);
@@ -199,38 +203,38 @@ class TerzoConto_Admin {
 
 		echo '<div style="margin:10px 0;padding:10px;background:#fff;border:1px solid #ccd0d4;">';
 
-		echo '<strong>Modifica massiva</strong><br /><br />';
+		echo '<strong>' . esc_html__('Modifica massiva', 'terzo-conto') . '</strong><br /><br />';
 
 		echo '<select name="bulk_categoria_id">';
-		echo '<option value="">-- Categoria (opzionale) --</option>';
+		echo '<option value="">' . esc_html__('-- Categoria (opzionale) --', 'terzo-conto') . '</option>';
 		foreach ($categorie as $cat) {
 			echo '<option value="'.esc_attr($cat['id']).'">'.esc_html($cat['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_conto_id">';
-		echo '<option value="">-- Conto (opzionale) --</option>';
+		echo '<option value="">' . esc_html__('-- Conto (opzionale) --', 'terzo-conto') . '</option>';
 		foreach ($conti as $conto) {
 			echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_raccolta_id">';
-		echo '<option value="">-- Raccolta (opzionale) --</option>';
+		echo '<option value="">' . esc_html__('-- Raccolta (opzionale) --', 'terzo-conto') . '</option>';
 		foreach ($raccolte as $raccolta) {
 			echo '<option value="'.esc_attr($raccolta['id']).'">'.esc_html($raccolta['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_anagrafica_id">';
-		echo '<option value="">-- Anagrafica (opzionale) --</option>';
+		echo '<option value="">' . esc_html__('-- Anagrafica (opzionale) --', 'terzo-conto') . '</option>';
 		foreach ($anagrafiche as $a) {
 			$label = $this->format_anagrafica_label($a);
 			echo '<option value="'.esc_attr($a['id']).'">'.esc_html($label).'</option>';
 		}
 		echo '</select> ';
 
-		submit_button('Applica ai selezionati', 'primary', '', false);
+		submit_button(__('Applica ai selezionati', 'terzo-conto'), 'primary', '', false);
 
 		echo '</div>';
 
@@ -599,32 +603,32 @@ class TerzoConto_Admin {
 		$categorie = $this->categorie->get_associazione();
 		$conti = $this->conti->get_all();
 
-		echo '<div class="wrap"><h1>Import CSV</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzo-conto') . '</h1>';
 
 		settings_errors('terzoconto');
 		
 		echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px 16px;margin:12px 0;max-width:900px;">';
 
-		echo '<strong>Formato CSV richiesto</strong><br /><br />';
+		echo '<strong>' . esc_html__('Formato CSV richiesto', 'terzo-conto') . '</strong><br /><br />';
 
 		echo '<ul style="margin-left:18px;">';
-		echo '<li>Separatore: <strong>punto e virgola ( ; )</strong></li>';
-		echo '<li>Encoding: UTF-8</li>';
-		echo '<li>Numero colonne: 3 oppure 4</li>';
+		echo '<li>' . esc_html__('Separatore:', 'terzo-conto') . ' <strong>' . esc_html__('punto e virgola ( ; )', 'terzo-conto') . '</strong></li>';
+		echo '<li>' . esc_html__('Encoding: UTF-8', 'terzo-conto') . '</li>';
+		echo '<li>' . esc_html__('Numero colonne: 3 oppure 4', 'terzo-conto') . '</li>';
 		echo '</ul>';
 
-		echo '<strong>Formato a 3 colonne:</strong><br />';
+		echo '<strong>' . esc_html__('Formato a 3 colonne:', 'terzo-conto') . '</strong><br />';
 		echo '<code>data;importo;descrizione</code><br />';
-		echo '<small>Il tipo (entrata/uscita) viene dedotto automaticamente dal segno dell\'importo</small><br /><br />';
+		echo '<small>' . esc_html__('Il tipo (entrata/uscita) viene dedotto automaticamente dal segno dell\'importo', 'terzo-conto') . '</small><br /><br />';
 
-		echo '<strong>Formato a 4 colonne:</strong><br />';
+		echo '<strong>' . esc_html__('Formato a 4 colonne:', 'terzo-conto') . '</strong><br />';
 		echo '<code>data;importo;descrizione;tipo</code><br />';
-		echo '<small>Tipo: E = entrata, U = uscita (in questo formato gli importi devono essere positivi)</small><br /><br />';
+		echo '<small>' . esc_html__('Tipo: E = entrata, U = uscita (in questo formato gli importi devono essere positivi)', 'terzo-conto') . '</small><br /><br />';
 
-		echo '<strong>Formato data:</strong> YYYY-MM-DD oppure DD/MM/YYYY<br />';
-		echo '<strong>Importo:</strong> numero (usa il punto come separatore decimale, es. 123.45)<br /><br />';
+		echo '<strong>' . esc_html__('Formato data:', 'terzo-conto') . '</strong> ' . esc_html__('YYYY-MM-DD oppure DD/MM/YYYY', 'terzo-conto') . '<br />';
+		echo '<strong>' . esc_html__('Importo:', 'terzo-conto') . '</strong> ' . esc_html__('numero (usa il punto come separatore decimale, es. 123.45)', 'terzo-conto') . '<br /><br />';
 
-		echo '<strong>Esempio valido:</strong><br />';
+		echo '<strong>' . esc_html__('Esempio valido:', 'terzo-conto') . '</strong><br />';
 		echo '<pre style="background:#f6f7f7;padding:8px;">';
 		echo "data;importo;descrizione;tipo\n";
 		echo "2025-10-31;50.00;Donazione evento;E\n";
@@ -638,12 +642,12 @@ class TerzoConto_Admin {
 		wp_nonce_field('terzoconto_action_nonce');
 		echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
 		echo '<p><select name="provider">
-			<option value="generico">CSV generico</option>
-			<option value="paypal">CSV PayPal</option>
-			<option value="satispay">CSV Satispay</option>
+			<option value="generico">' . esc_html__('CSV generico', 'terzo-conto') . '</option>
+			<option value="paypal">' . esc_html__('CSV PayPal', 'terzo-conto') . '</option>
+			<option value="satispay">' . esc_html__('CSV Satispay', 'terzo-conto') . '</option>
 		</select></p>';
 		echo '<p><input type="file" name="csv_file" accept=".csv" required /></p>';
-		submit_button('Carica e anteprima');
+		submit_button(__('Carica e anteprima', 'terzo-conto'));
 		echo '</form>';
 
 		if (is_array($preview) && isset($preview['rows'])) {
@@ -652,8 +656,8 @@ class TerzoConto_Admin {
 			$valid_rows = $preview['valid_rows'];
 			$duplicates = $preview['duplicates'];
 
-			echo '<h2>Anteprima</h2>';
-			echo '<p>Righe valide: ' . count($valid_rows) . ' su ' . count($rows) . '</p>';
+			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
+			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
 			wp_nonce_field('terzoconto_action_nonce');
@@ -687,8 +691,8 @@ class TerzoConto_Admin {
 
 				echo '<td>
 					<select name="rows['.$i.'][tipo]">
-						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>Entrata</option>
-						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>Uscita</option>
+						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
+						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 					</select>
 				</td>';
 
@@ -702,7 +706,7 @@ class TerzoConto_Admin {
 				) . '</td>';
 				
 				echo '<td><select name="rows['.$i.'][conto_id]" required>';
-				echo '<option value="">-- conto --</option>';
+				echo '<option value="">' . esc_html__('-- conto --', 'terzo-conto') . '</option>';
 
 				foreach ($conti as $conto) {
 					echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
@@ -712,8 +716,8 @@ class TerzoConto_Admin {
 
 				$status = [];
 				if ($errors) $status[] = implode(' ', $errors);
-				if ($is_dupe) $status[] = 'Duplicato';
-				if (! $status) $status[] = 'OK';
+				if ($is_dupe) $status[] = __('Duplicato', 'terzo-conto');
+				if (! $status) $status[] = __('OK', 'terzo-conto');
 
 				echo '<td>' . esc_html(implode(' | ', $status)) . '</td>';
 
@@ -722,31 +726,31 @@ class TerzoConto_Admin {
 
 			echo '</tbody></table>';
 
-			submit_button('Importa tutto');
+			submit_button(__('Importa tutto', 'terzo-conto'));
 
 			echo '</form>';
 
-			echo '<h3>Importa righe valide</h3>';
+			echo '<h3>' . esc_html__('Importa righe valide', 'terzo-conto') . '</h3>';
 
 			echo '<form method="post">';
 			wp_nonce_field('terzoconto_action_nonce');
 			echo '<input type="hidden" name="terzoconto_action" value="import_commit" />';
 			
 			echo '<p><select name="categoria_associazione_id" required>';
-			echo '<option value="0">Seleziona categoria</option>';
+			echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
 			foreach ($categorie as $categoria) {
 			    echo '<option value="' . esc_attr($categoria['id']) . '">' . esc_html($categoria['nome']) . '</option>';
 			}
 			echo '</select></p>';
 			
 			echo '<p><select name="conto_id" required>';
-			echo '<option value="0">Seleziona conto</option>';
+			echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
 			foreach ($conti as $conto) {
 			    echo '<option value="' . esc_attr($conto['id']) . '">' . esc_html($conto['nome']) . '</option>';
 			}
 			echo '</select></p>';
 			
-			submit_button('Importa righe valide');
+			submit_button(__('Importa righe valide', 'terzo-conto'));
 			
 			echo '</form>';
 		}
@@ -1225,21 +1229,21 @@ class TerzoConto_Admin {
     private function handle_import_preview(): void {
 
 		if (! isset($_FILES['csv_file']) || empty($_FILES['csv_file']['tmp_name'])) {
-			add_settings_error('terzoconto', 'import_missing_file', 'File mancante', 'error');
+		add_settings_error('terzoconto', 'import_missing_file', __('File mancante', 'terzo-conto'), 'error');
 			return;
 		}
 		if (! isset($_FILES['csv_file']['error']) || (int) $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-			add_settings_error('terzoconto', 'import_upload_error', 'Errore upload file', 'error');
+			add_settings_error('terzoconto', 'import_upload_error', __('Errore upload file', 'terzo-conto'), 'error');
 			return;
 		}
 		if (! isset($_FILES['csv_file']['size']) || (int) $_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
-			add_settings_error('terzoconto', 'import_file_too_large', 'File troppo grande (max 2MB)', 'error');
+			add_settings_error('terzoconto', 'import_file_too_large', __('File troppo grande (max 2MB)', 'terzo-conto'), 'error');
 			return;
 		}
 		$file_name = sanitize_file_name(wp_unslash((string) ($_FILES['csv_file']['name'] ?? '')));
 		$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
 		if ($file_ext !== 'csv') {
-			add_settings_error('terzoconto', 'import_invalid_extension', 'Estensione file non valida (solo .csv)', 'error');
+			add_settings_error('terzoconto', 'import_invalid_extension', __('Estensione file non valida (solo .csv)', 'terzo-conto'), 'error');
 			return;
 		}
 		$allowed_mimes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
@@ -1255,7 +1259,7 @@ class TerzoConto_Admin {
 			}
 		}
 		if (! $mime_ok_wp && ! $mime_ok_finfo) {
-			add_settings_error('terzoconto', 'import_invalid_mime', 'Tipo file non valido', 'error');
+			add_settings_error('terzoconto', 'import_invalid_mime', __('Tipo file non valido', 'terzo-conto'), 'error');
 			return;
 		}
 
@@ -1264,7 +1268,7 @@ class TerzoConto_Admin {
 		$rows = $this->import_service->parse_csv($_FILES['csv_file']['tmp_name'], $provider);
 
 		if ($rows === []) {
-			add_settings_error('terzoconto', 'import_empty', 'CSV vuoto', 'error');
+			add_settings_error('terzoconto', 'import_empty', __('CSV vuoto', 'terzo-conto'), 'error');
 			return;
 		}
 
@@ -1277,7 +1281,7 @@ class TerzoConto_Admin {
 			'duplicates' => $duplicates,
 		]);
 
-		add_settings_error('terzoconto', 'import_ok', 'Anteprima generata', 'updated');
+		add_settings_error('terzoconto', 'import_ok', __('Anteprima generata', 'terzo-conto'), 'updated');
 	}
 
     private function handle_import_commit(): void {
@@ -1293,7 +1297,7 @@ class TerzoConto_Admin {
 		$rows = $_POST['rows'] ?? [];
 
 		if (empty($rows)) {
-			add_settings_error('terzoconto', 'import_no_data', 'Nessun dato da importare', 'error');
+			add_settings_error('terzoconto', 'import_no_data', __('Nessun dato da importare', 'terzo-conto'), 'error');
 			return;
 		}
 
@@ -1341,7 +1345,7 @@ class TerzoConto_Admin {
 
 		delete_transient($this->get_import_preview_transient_key());
 
-		add_settings_error('terzoconto', 'import_done', "Import completato: $imported movimenti", 'updated');
+		add_settings_error('terzoconto', 'import_done', sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported), 'updated');
 	}
 
     private function get_import_preview_transient_key(): string {
@@ -1640,7 +1644,7 @@ class TerzoConto_Admin {
 	
 	private function handle_annulla_movimento(): void {
 
-		$id = absint($_POST['id'] ?? 0);
+		$id = absint($_GET['id'] ?? 0);
 
 		if ($id <= 0) {
 			return;
@@ -1722,13 +1726,14 @@ class TerzoConto_Admin {
 
         // Trappola per errori MySQL
         if ($updated === false) {
-            wp_die(
-                '<h1>Errore MySQL</h1>' .
-                '<p>Il database ha rifiutato l\'aggiornamento dei dati.</p>' .
-                '<p><strong>Errore riportato:</strong> ' . esc_html($wpdb->last_error) . '</p>' .
-                '<p><strong>Query tentata:</strong> <code>' . esc_html($sql) . '</code></p>' .
-                '<p>Usa la freccia indietro del browser per tornare al plugin.</p>'
+            add_settings_error(
+                'terzoconto',
+                'bulk_update_error',
+                __('Operazione non riuscita. Riprova più tardi.', 'terzo-conto'),
+                'error'
             );
+            wp_safe_redirect(admin_url('admin.php?page=terzoconto'));
+            exit;
         }
 
         // 6. Redirect finale
@@ -1739,27 +1744,27 @@ class TerzoConto_Admin {
 	private function render_support_box(): void{
 		?>
 		<div class="terzoconto-support-box">
-			<h2>☕ Supporta il progetto</h2>
+			<h2><?php echo esc_html__('☕ Supporta il progetto', 'terzo-conto'); ?></h2>
 
 			<p>
-				Questo plugin è sviluppato e mantenuto gratuitamente.<br>
-				Se ti è utile, puoi supportarlo:
+				<?php echo esc_html__('Questo plugin è sviluppato e mantenuto gratuitamente.', 'terzo-conto'); ?><br>
+				<?php echo esc_html__('Se ti è utile, puoi supportarlo:', 'terzo-conto'); ?>
 			</p>
 
 			<p>
 				<a href="https://github.com/sponsors/mjfan80" target="_blank" class="button button-primary">
-					❤️ GitHub Sponsors
+					<?php echo esc_html__('❤️ GitHub Sponsors', 'terzo-conto'); ?>
 				</a>
 			</p>
 
 			<p>
 				<a href="https://www.buymeacoffee.com/gabrieleprandini" target="_blank" class="button">
-					☕ Offrimi un caffè
+					<?php echo esc_html__('☕ Offrimi un caffè', 'terzo-conto'); ?>
 				</a>
 			</p>
 
 			<p style="font-size:12px; opacity:0.7;">
-				Sviluppato da Gabriele Prandini (mjfan80)
+				<?php echo esc_html__('Sviluppato da Gabriele Prandini (mjfan80)', 'terzo-conto'); ?>
 			</p>
 		</div>
 		<?php
