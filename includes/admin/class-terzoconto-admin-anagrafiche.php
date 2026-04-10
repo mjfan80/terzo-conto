@@ -70,7 +70,7 @@ class TerzoConto_Admin_Anagrafiche {
             wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
         }
 
-        $edit_id = absint($_GET['edit_id'] ?? 0);
+        $edit_id = absint(wp_unslash($_GET['edit_id'] ?? 0));
         $anagrafica = $edit_id > 0 ? $this->anagrafiche_repository->find_by_id($edit_id) : null;
         if (is_array($this->submitted_anagrafica)) {
             $anagrafica = $this->submitted_anagrafica;

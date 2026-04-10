@@ -38,11 +38,8 @@ class TerzoConto_Admin_Security {
      * @param string $field  Nome campo nonce (default: _wpnonce)
      */
     public function verify_post_nonce(string $action, string $field = '_wpnonce'): bool {
-
         $nonce = $_POST[$field] ?? '';
-
-        // wp_unslash è necessario in WP
-        $nonce = is_string($nonce) ? wp_unslash($nonce) : '';
+        $nonce = is_string($nonce) ? sanitize_text_field(wp_unslash($nonce)) : '';
 
         if ($nonce === '' || ! wp_verify_nonce($nonce, $action)) {
             add_settings_error(
@@ -64,11 +61,8 @@ class TerzoConto_Admin_Security {
      * @param string $field  Nome parametro GET (default: _wpnonce)
      */
     public function verify_get_nonce(string $action, string $field = '_wpnonce'): bool {
-
         $nonce = $_GET[$field] ?? '';
-
-        $nonce = is_string($nonce) ? wp_unslash($nonce) : '';
-        $nonce = sanitize_text_field($nonce);
+        $nonce = is_string($nonce) ? sanitize_text_field(wp_unslash($nonce)) : '';
 
         return $nonce !== '' && wp_verify_nonce($nonce, $action);
     }
