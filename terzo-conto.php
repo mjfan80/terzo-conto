@@ -29,10 +29,44 @@ require_once TERZOCONTO_PLUGIN_DIR . 'includes/class-terzoconto.php';
 
 register_activation_hook(__FILE__, ['TerzoConto_Activator', 'activate']);
 
-function terzoconto_install_or_update(): void {
+function terzoconto_handle_upgrade($upgrader_object, array $options): void {
+    if (($options['action'] ?? '') !== 'update') {
+        return;
+    }
+
+    if (! isset($options['type']) || $options['type'] !== 'plugin') {
+        return;
+    }
+
+    $plugin_basename = plugin_basename(__FILE__);
+    $updated_plugins = [];
+
+    if (isset($options['plugins']) && is_array($options['plugins'])) {
+        $updated_plugins = $options['plugins'];
+    } elseif (isset($options['plugin']) && is_string($options['plugin'])) {
+        $updated_plugins = [$options['plugin']];
+    }
+
+    if (! in_array($plugin_basename, $updated_plugins, true)) {
+        return;
+    }
+
     TerzoConto_Installer::install_or_update();
 }
-add_action('plugins_loaded', 'terzoconto_install_or_update', 5);
+add_action('upgrader_process_complete', 'terzoconto_handle_upgrade', 10, 2);
+
+function terzoconto_maybe_run_version_check(): void {
+    $stored_db_version = get_option('terzoconto_db_version', '');
+    $stored_plugin_version = get_option('terzoconto_plugin_version', '');
+
+    if (
+        version_compare((string) $stored_db_version, TERZOCONTO_DB_VERSION, '<')
+        || version_compare((string) $stored_plugin_version, TERZOCONTO_VERSION, '<')
+    ) {
+        TerzoConto_Installer::install_or_update();
+    }
+}
+add_action('plugins_loaded', 'terzoconto_maybe_run_version_check', 5);
 
 function terzoconto_bootstrap(): void {
     $plugin = new TerzoConto();

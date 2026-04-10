@@ -6,38 +6,66 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Installer {
     private const DB_VERSION_OPTION = 'terzoconto_db_version';
+    private const PLUGIN_VERSION_OPTION = 'terzoconto_plugin_version';
+    private const SEED_VERSION_OPTION = 'terzoconto_seed_version';
     private const MIGRATION_LOCK_OPTION = 'terzoconto_migrating';
+
+    public static function install(): void {
+        $current_version = get_option(self::DB_VERSION_OPTION, false);
+
+        try {
+            if (
+                $current_version !== false
+                && version_compare((string) $current_version, TERZOCONTO_DB_VERSION, '<')
+            ) {
+                self::install_or_update();
+                return;
+            }
+
+            self::register_attachment_taxonomy();
+            self::maybe_create_tables();
+            self::maybe_seed_defaults();
+            update_option(self::DB_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
+            update_option(self::PLUGIN_VERSION_OPTION, TERZOCONTO_VERSION, false);
+        } catch (Throwable $exception) {
+            error_log(sprintf('[TerzoConto] Activation install failed at DB version %s: %s', (string) $current_version, $exception->getMessage()));
+        }
+    }
 
     public static function install_or_update(): void {
         $current_version = get_option(self::DB_VERSION_OPTION, false);
+        $current_plugin_version = get_option(self::PLUGIN_VERSION_OPTION, false);
 
         try {
             if ($current_version === false) {
                 self::maybe_create_tables();
-                self::seed_defaults();
+                self::maybe_seed_defaults();
                 self::register_attachment_taxonomy();
 
                 update_option(self::DB_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
+                update_option(self::PLUGIN_VERSION_OPTION, TERZOCONTO_VERSION, false);
 
                 return;
             }
 
-            if (version_compare((string) $current_version, TERZOCONTO_DB_VERSION, '>=')) {
-                self::register_attachment_taxonomy();
+            if (version_compare((string) $current_version, TERZOCONTO_DB_VERSION, '<')) {
+                self::maybe_create_tables();
 
-                return;
+                $migrations_ran = self::run_migrations((string) $current_version);
+
+                if (! $migrations_ran) {
+                    return;
+                }
+
+                self::maybe_seed_defaults();
+                update_option(self::DB_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
             }
 
-            $migrations_ran = self::run_migrations((string) $current_version);
-
-            if (! $migrations_ran) {
-                return;
+            if (version_compare((string) $current_plugin_version, TERZOCONTO_VERSION, '<')) {
+                update_option(self::PLUGIN_VERSION_OPTION, TERZOCONTO_VERSION, false);
             }
 
-            self::seed_defaults();
             self::register_attachment_taxonomy();
-
-            update_option(self::DB_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
         } catch (Throwable $exception) {
             error_log(sprintf('[TerzoConto] Upgrade failed from DB version %s to %s: %s', (string) $current_version, TERZOCONTO_DB_VERSION, $exception->getMessage()));
         }
@@ -60,6 +88,7 @@ class TerzoConto_Installer {
 
     private static function get_migrations(): array {
         return [
+            // v1.1.0: aggiunge updated_at e indice su (anno, progressivo_annuale) nella tabella movimenti.
             '1.1.0' => static function (): void {
                 global $wpdb;
 
@@ -83,6 +112,7 @@ class TerzoConto_Installer {
                     }
                 }
             },
+            // v1.2.0: aggiunge codice_fiscale e relativo indice alla tabella anagrafiche.
             '1.2.0' => static function (): void {
                 global $wpdb;
 
@@ -144,6 +174,30 @@ class TerzoConto_Installer {
         $found = $wpdb->get_var($sql);
 
         return $found === $table_name;
+    }
+
+    private static function required_tables_exist(): bool {
+        global $wpdb;
+
+        $required_tables = [
+            $wpdb->prefix . 'terzoconto_movimenti',
+            $wpdb->prefix . 'terzoconto_categorie_associazione',
+            $wpdb->prefix . 'terzoconto_categorie_modello_d',
+            $wpdb->prefix . 'terzoconto_conti',
+            $wpdb->prefix . 'terzoconto_raccolte_fondi',
+            $wpdb->prefix . 'terzoconto_anagrafiche',
+            $wpdb->prefix . 'terzoconto_settings',
+            $wpdb->prefix . 'terzoconto_comunicazioni_ae',
+            $wpdb->prefix . 'terzoconto_regole',
+        ];
+
+        foreach ($required_tables as $table_name) {
+            if (! self::table_exists($table_name)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static function column_exists(string $table_name, string $column_name): bool {
@@ -301,6 +355,20 @@ class TerzoConto_Installer {
         ) {$charset_collate};";
 
         return $tables;
+    }
+
+    private static function maybe_seed_defaults(): void {
+        $seeded_version = get_option(self::SEED_VERSION_OPTION, '');
+
+        if (
+            $seeded_version !== false
+            && version_compare((string) $seeded_version, TERZOCONTO_DB_VERSION, '>=')
+        ) {
+            return;
+        }
+
+        self::seed_defaults();
+        update_option(self::SEED_VERSION_OPTION, TERZOCONTO_DB_VERSION, false);
     }
 
     private static function seed_defaults(): void {
