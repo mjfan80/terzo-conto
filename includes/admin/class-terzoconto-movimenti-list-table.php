@@ -24,20 +24,20 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 		$this->items_data = $items;
 	}
 
-    public function get_columns(): array {
+	public function get_columns(): array {
 		return [
 			'cb' => '<input type="checkbox" />',
-			'id' => 'ID',
-			'stato' => 'Stato', 
-			'data_movimento' => 'Data',
+			'id' => esc_html__('ID', 'terzo-conto'),
+			'stato' => esc_html__('Stato', 'terzo-conto'), 
+			'data_movimento' => esc_html__('Data', 'terzo-conto'),
 			'progressivo_annuale' => '#',
-			'tipo' => 'Tipo',
-			'importo' => 'Importo',
-			'conto' => 'Conto',
-			'categoria' => 'Categoria',
-			'raccolta' => 'Raccolta',
-			'anagrafica' => 'Anagrafica',
-			'descrizione' => 'Descrizione',
+			'tipo' => esc_html__('Tipo', 'terzo-conto'),
+			'importo' => esc_html__('Importo', 'terzo-conto'),
+			'conto' => esc_html__('Conto', 'terzo-conto'),
+			'categoria' => esc_html__('Categoria', 'terzo-conto'),
+			'raccolta' => esc_html__('Raccolta', 'terzo-conto'),
+			'anagrafica' => esc_html__('Anagrafica', 'terzo-conto'),
+			'descrizione' => esc_html__('Descrizione', 'terzo-conto'),
 		];
 	}
 	
@@ -91,14 +91,15 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         );
 
         $actions['edit'] = sprintf(
-            '<a href="%s">Modifica</a>',
-            esc_url($edit_url)
+            '<a href="%s">%s</a>',
+            esc_url($edit_url),
+            esc_html__('Modifica', 'terzo-conto')
         );
 
 		// 2. ANNULLA (Visibile solo se il movimento è attivo)
 		if ($item['stato'] !== 'annullato') {
 			$actions['annulla'] = sprintf(
-				'<a href="%s" class="submitdelete" onclick="return confirm(\'Confermi di voler annullare questo movimento?\')">Annulla</a>',
+				'<a href="%s" class="submitdelete" onclick="return confirm(\'%s\')">%s</a>',
 				esc_url(
 					wp_nonce_url(
 						add_query_arg([
@@ -108,7 +109,9 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 						], admin_url('admin.php')),
 						'terzoconto_action_nonce'
 					)
-				)
+				),
+                esc_js(__('Confermi di voler annullare questo movimento?', 'terzo-conto')),
+                esc_html__('Annulla', 'terzo-conto')
 			);
 		}
 
@@ -121,9 +124,9 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 	
 	protected function column_stato($item) {
         if ($item['stato'] === 'annullato') {
-            return '<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">Annullato</span>';
+            return '<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Annullato', 'terzo-conto') . '</span>';
         }
-        return '<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">Attivo</span>';
+        return '<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Attivo', 'terzo-conto') . '</span>';
     }
 
     public function prepare_items(): void {

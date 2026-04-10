@@ -1,4 +1,8 @@
 <?php
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 /** @var array $context */
 /** @var TerzoConto_Admin $admin */
 $is_edit = (bool) ($context['is_edit'] ?? false);
@@ -66,7 +70,15 @@ $conti = (array) ($context['conti'] ?? []);
             <tr>
                 <td><a href="<?php echo esc_url($edit_url); ?>"><?php echo esc_html($row['nome']); ?></a></td>
                 <td><?php echo esc_html((string) ($row['descrizione'] ?? '')); ?></td>
-                <td><?php echo $is_attivo ? '<span class="terzoconto-conti-status-badge">' . esc_html__('Attivo', 'terzo-conto') . '</span>' : '—'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></td>
+                <td>
+                    <?php
+                    echo wp_kses_post(
+                        $is_attivo
+                            ? '<span class="terzoconto-conti-status-badge">' . esc_html__('Attivo', 'terzo-conto') . '</span>'
+                            : esc_html__('—', 'terzo-conto')
+                    );
+                    ?>
+                </td>
                 <td><?php echo esc_html($tracciabile_label); ?></td>
                 <td>
                     <a class="button button-secondary" href="<?php echo esc_url($edit_url); ?>"><?php echo esc_html__('Modifica', 'terzo-conto'); ?></a>
