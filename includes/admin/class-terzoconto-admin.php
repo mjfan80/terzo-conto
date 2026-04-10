@@ -20,6 +20,7 @@ class TerzoConto_Admin {
 
     public function __construct(
         private TerzoConto_Movimenti_Repository $movimenti,
+        private TerzoConto_Movimenti_Service $movimenti_service,
         private TerzoConto_Categorie_Repository $categorie,
         private TerzoConto_Conti_Repository $conti,
         private TerzoConto_Raccolte_Repository $raccolte,
@@ -1202,54 +1203,6 @@ class TerzoConto_Admin {
         ];
     }
 
-    private function validate_movimento_data(array $data, int $movimento_id = 0): bool {
-        $is_valid = true;
-
-        if ($data['data_movimento'] === '' || ! $this->is_valid_date($data['data_movimento'])) {
-            add_settings_error('terzoconto', 'movimento_data_movimento', __('Inserisci una data movimento valida.', 'terzo-conto'), 'error');
-            $is_valid = false;
-        }
-
-        if (! $this->validator->is_valid_money((float) $data['importo'])) {
-            add_settings_error('terzoconto', 'movimento_importo', __('Inserisci un importo maggiore di zero.', 'terzo-conto'), 'error');
-            $is_valid = false;
-        }
-
-        if ($data['categoria_associazione_id'] <= 0) {
-            add_settings_error('terzoconto', 'movimento_categoria', __('Seleziona una categoria valida.', 'terzo-conto'), 'error');
-            $is_valid = false;
-        }
-
-        if ($data['conto_id'] <= 0) {
-            add_settings_error('terzoconto', 'movimento_conto', __('Seleziona un conto valido.', 'terzo-conto'), 'error');
-            $is_valid = false;
-        }
-
-        $raccolta_id = (int) $data['raccolta_fondi_id'];
-        if ($raccolta_id > 0 && ! $this->raccolte->is_open($raccolta_id)) {
-            add_settings_error('terzoconto', 'raccolta_chiusa', __('La raccolta fondi è chiusa.', 'terzo-conto'), 'error');
-            $is_valid = false;
-        }
-
-        if ($movimento_id > 0 && $data['data_movimento'] !== '') {
-            $current = $this->movimenti->find_by_id($movimento_id);
-            if (is_array($current)) {
-                $current_year = (int) ($current['anno'] ?? 0);
-                $new_year = (int) gmdate('Y', strtotime($data['data_movimento']));
-                if ($current_year > 0 && $new_year !== $current_year) {
-                    add_settings_error('terzoconto', 'movimento_anno', __("Non è possibile modificare l'anno di un movimento. Eliminare il movimento e crearne uno nuovo.", 'terzo-conto'), 'error');
-                    $is_valid = false;
-                }
-            }
-        }
-
-        return $is_valid;
-    }
-
-    private function is_valid_date(string $value): bool {
-        return $this->validator->is_valid_date($value);
-    }
-
     private function get_movimento_stato_filter(): string {
         $nonce = sanitize_text_field(wp_unslash($_GET['terzoconto_filter_nonce'] ?? ''));
         if ($nonce === '' || ! $this->security->verify_get_nonce('terzoconto_filter_nonce', $nonce)) {
@@ -1656,14 +1609,10 @@ class TerzoConto_Admin {
 		$data = $this->sanitize_movimento_data($_POST);
 		$this->submitted_movimento = $data;
 
-		if (! $this->validate_movimento_data($data)) {
-			return;
-		}
+		$result = $this->movimenti_service->create($data);
 
-		$ok = $this->movimenti->create($data);
-
-		if (! $ok) {
-			add_settings_error('terzoconto', 'create_error', 'Errore creazione movimento', 'error');
+		if (! $result['success']) {
+			add_settings_error('terzoconto', 'create_error', (string) ($result['error'] ?? __('Errore creazione movimento', 'terzo-conto')), 'error');
 			return;
 		}
 
@@ -1675,21 +1624,13 @@ class TerzoConto_Admin {
 
 		$id = absint($_POST['id'] ?? 0);
 
-		if ($id <= 0) {
-			add_settings_error('terzoconto', 'invalid_id', 'ID non valido', 'error');
-			return;
-		}
-
 		$data = $this->sanitize_movimento_data($_POST);
+		$this->submitted_movimento = $data;
 
-		if (! $this->validate_movimento_data($data, $id)) {
-			return;
-		}
+		$result = $this->movimenti_service->update($id, $data);
 
-		$ok = $this->movimenti->update($id, $data);
-
-		if (! $ok) {
-			add_settings_error('terzoconto', 'update_error', 'Errore aggiornamento movimento', 'error');
+		if (! $result['success']) {
+			add_settings_error('terzoconto', 'update_error', (string) ($result['error'] ?? __('Errore aggiornamento movimento', 'terzo-conto')), 'error');
 			return;
 		}
 

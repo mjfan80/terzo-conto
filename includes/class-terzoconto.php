@@ -12,6 +12,7 @@ require_once TERZOCONTO_PLUGIN_DIR . 'includes/repositories/class-terzoconto-ana
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/repositories/class-terzoconto-settings-repository.php';
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/services/class-terzoconto-import-service.php';
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/services/class-terzoconto-report-service.php';
+require_once TERZOCONTO_PLUGIN_DIR . 'includes/services/class-terzoconto-movimenti-service.php';
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin.php';
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin-anagrafiche.php';
 require_once TERZOCONTO_PLUGIN_DIR . 'includes/admin/class-terzoconto-admin-settings.php';
@@ -22,11 +23,15 @@ class TerzoConto {
         add_action('plugins_loaded', [$this, 'load_textdomain']);
 
         if (is_admin()) {
+            $movimenti_repository = new TerzoConto_Movimenti_Repository();
+            $raccolte_repository = new TerzoConto_Raccolte_Repository();
+
             $admin = new TerzoConto_Admin(
-                new TerzoConto_Movimenti_Repository(),
+                $movimenti_repository,
+                new TerzoConto_Movimenti_Service($movimenti_repository, $raccolte_repository),
                 new TerzoConto_Categorie_Repository(),
                 new TerzoConto_Conti_Repository(),
-                new TerzoConto_Raccolte_Repository(),
+                $raccolte_repository,
                 new TerzoConto_Anagrafiche_Repository(),
                 new TerzoConto_Import_Service(),
                 new TerzoConto_Report_Service()
