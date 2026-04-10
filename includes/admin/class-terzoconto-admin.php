@@ -73,22 +73,19 @@ class TerzoConto_Admin {
 
         // Verifica di sicurezza differenziata in base all'azione
         if ($action === 'bulk_update_movimenti') {
-            // Usa il Nonce personalizzato del Form della Tabella
-            if (! $this->security->verify_post_nonce('terzoconto_action_nonce', 'tc_bulk_nonce')) {
-                return;
-            }
+            check_admin_referer('terzoconto_action_nonce', 'tc_bulk_nonce');
         } elseif ($action === 'annulla_movimento') {
-            if (
-                (isset($_GET['terzoconto_action']) && ! isset($_POST['terzoconto_action']) && ! $this->security->verify_get_nonce('terzoconto_action_nonce', '_wpnonce'))
-                || (! isset($_GET['terzoconto_action']) && ! $this->security->verify_post_nonce('terzoconto_action_nonce'))
-            ) {
-		        return;
-		    }
+            if (isset($_GET['terzoconto_action']) && ! isset($_POST['terzoconto_action'])) {
+                $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce'] ?? ''));
+                if (! wp_verify_nonce($nonce, 'terzoconto_action_nonce')) {
+                    return;
+                }
+            } else {
+                check_admin_referer('terzoconto_action_nonce');
+            }
 		} else {
             // Azioni standard POST (inserimento movimento, creazione conto, ecc...)
-            if (! $this->security->verify_post_nonce('terzoconto_action_nonce')) {
-                return;
-            }
+            check_admin_referer('terzoconto_action_nonce');
         }
 
         switch ($action) {
@@ -421,8 +418,8 @@ class TerzoConto_Admin {
         // Notifiche Modifica Massiva
         $bulk_status = sanitize_text_field(wp_unslash($_GET['tc_bulk'] ?? ''));
         if ($bulk_status === 'done') {
-            $count = (int) wp_unslash($_GET['updated'] ?? 0);
-            echo '<div class="notice notice-success is-dismissible"><p>' . sprintf(esc_html__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count) . '</p></div>';
+            $count = absint(wp_unslash($_GET['updated'] ?? 0));
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count)) . '</p></div>';
         } elseif ($bulk_status === 'no_ids') {
             echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
         } elseif ($bulk_status === 'no_fields') {
@@ -670,7 +667,7 @@ class TerzoConto_Admin {
 			$duplicates = $preview['duplicates'];
 
 			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
-			echo '<p>' . sprintf(esc_html__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows)) . '</p>';
+			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
 			wp_nonce_field('terzoconto_action_nonce');
@@ -696,7 +693,7 @@ class TerzoConto_Admin {
 
 				echo '<tr>';
 
-				echo '<td>' . ($i + 1) . '</td>';
+				echo '<td>' . esc_html((string) ($i + 1)) . '</td>';
 
 				echo '<td><input type="date" name="rows['.$i.'][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
 
@@ -1183,7 +1180,7 @@ class TerzoConto_Admin {
         echo '<input type="hidden" name="page" value="terzoconto" />';
         wp_nonce_field(
 		    'terzoconto_filter_nonce',
-		    'terzoconto_filter_nonce',
+		    '_wpnonce',
 		    false
 		);
         echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzo-conto') . '</label>';
@@ -1212,16 +1209,17 @@ class TerzoConto_Admin {
             'importo' => (float) str_replace(',', '.', (string) wp_unslash($source['importo'] ?? '0')),
             'tipo' => $tipo,
 			'stato' => $stato,
-            'categoria_associazione_id' => absint($source['categoria_associazione_id'] ?? 0),
-            'conto_id' => absint($source['conto_id'] ?? 0),
-            'raccolta_fondi_id' => absint($source['raccolta_fondi_id'] ?? 0),
-            'anagrafica_id' => absint($source['anagrafica_id'] ?? 0),
+            'categoria_associazione_id' => absint(wp_unslash($source['categoria_associazione_id'] ?? 0)),
+            'conto_id' => absint(wp_unslash($source['conto_id'] ?? 0)),
+            'raccolta_fondi_id' => absint(wp_unslash($source['raccolta_fondi_id'] ?? 0)),
+            'anagrafica_id' => absint(wp_unslash($source['anagrafica_id'] ?? 0)),
             'descrizione' => sanitize_text_field(wp_unslash($source['descrizione'] ?? '')),
         ];
     }
 
     private function get_movimento_stato_filter(): string {
-        if (! $this->security->verify_get_nonce('terzoconto_filter_nonce')) {
+        $nonce = sanitize_text_field(wp_unslash($_GET['_wpnonce'] ?? ''));
+        if (! wp_verify_nonce($nonce, 'terzoconto_filter_nonce')) {
 		    return '';
 		}
 
@@ -1239,7 +1237,7 @@ class TerzoConto_Admin {
     }
 
     private function handle_import_preview(): void {
-		$tmp_name = wp_unslash($_FILES['csv_file']['tmp_name'] ?? '');
+		$tmp_name = (string) ($_FILES['csv_file']['tmp_name'] ?? '');
 		if (! isset($_FILES['csv_file']) || $tmp_name === '') {
 		add_settings_error('terzoconto', 'import_missing_file', __('File mancante', 'terzo-conto'), 'error');
 			return;
@@ -1252,7 +1250,7 @@ class TerzoConto_Admin {
 			add_settings_error('terzoconto', 'import_file_too_large', __('File troppo grande (max 2MB)', 'terzo-conto'), 'error');
 			return;
 		}
-		$file_name = sanitize_file_name(wp_unslash((string) ($_FILES['csv_file']['name'] ?? '')));
+		$file_name = sanitize_file_name((string) ($_FILES['csv_file']['name'] ?? ''));
 		$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
 		if ($file_ext !== 'csv') {
 			add_settings_error('terzoconto', 'import_invalid_extension', __('Estensione file non valida (solo .csv)', 'terzo-conto'), 'error');
@@ -1306,7 +1304,7 @@ class TerzoConto_Admin {
 			return;
 		}
 
-		$rows = wp_unslash($_POST['rows'] ?? []);
+		$rows = $_POST['rows'] ?? [];
         if (! is_array($rows)) {
             $rows = [];
         }
@@ -1360,7 +1358,7 @@ class TerzoConto_Admin {
 
 		delete_transient($this->get_import_preview_transient_key());
 
-		add_settings_error('terzoconto', 'import_done', sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported), 'updated');
+		add_settings_error('terzoconto', 'import_done', esc_html(sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported)), 'updated');
 	}
 
     private function get_import_preview_transient_key(): string {
@@ -1390,7 +1388,7 @@ class TerzoConto_Admin {
             return;
         }
 
-        $id = absint($_POST['id'] ?? 0);
+        $id = absint(wp_unslash($_POST['id'] ?? 0));
         $data = $this->sanitize_conto_data($_POST);
         if ($id > 0) {
             $data['id'] = $id;
@@ -1412,7 +1410,7 @@ class TerzoConto_Admin {
             return;
         }
 
-        $id = absint($_POST['id'] ?? 0);
+        $id = absint(wp_unslash($_POST['id'] ?? 0));
         if ($id <= 0) {
             wp_safe_redirect(add_query_arg('tc_conto_status', 'error', admin_url('admin.php?page=terzoconto-conti')));
             exit;
@@ -1500,7 +1498,7 @@ class TerzoConto_Admin {
             return;
         }
 
-        $id = absint($_POST['id'] ?? 0);
+        $id = absint(wp_unslash($_POST['id'] ?? 0));
         $data = $this->sanitize_raccolta_data($_POST);
         if ($id > 0) {
             $data['id'] = $id;
@@ -1522,7 +1520,7 @@ class TerzoConto_Admin {
             return;
         }
 
-        $id = absint($_POST['id'] ?? 0);
+        $id = absint(wp_unslash($_POST['id'] ?? 0));
         if ($id <= 0) {
             wp_safe_redirect(add_query_arg('tc_raccolta_status', 'error', admin_url('admin.php?page=terzoconto-raccolte')));
             exit;
@@ -1647,7 +1645,7 @@ class TerzoConto_Admin {
             return;
         }
 
-		$id = absint($_POST['id'] ?? 0);
+		$id = absint(wp_unslash($_POST['id'] ?? 0));
 
 		$data = $this->sanitize_movimento_data($_POST);
 		$this->submitted_movimento = $data;
@@ -1708,17 +1706,17 @@ class TerzoConto_Admin {
 
         // 3. Acquisizione dei campi da modificare
         $fields = [];
-        if (!empty($_POST['bulk_categoria_id'])) {
-            $fields['categoria_associazione_id'] = (int) $_POST['bulk_categoria_id'];
+        if (! empty($_POST['bulk_categoria_id'])) {
+            $fields['categoria_associazione_id'] = absint(wp_unslash($_POST['bulk_categoria_id']));
         }
-        if (!empty($_POST['bulk_conto_id'])) {
-            $fields['conto_id'] = (int) $_POST['bulk_conto_id'];
+        if (! empty($_POST['bulk_conto_id'])) {
+            $fields['conto_id'] = absint(wp_unslash($_POST['bulk_conto_id']));
         }
-        if (!empty($_POST['bulk_raccolta_id'])) {
-            $fields['raccolta_fondi_id'] = (int) $_POST['bulk_raccolta_id'];
+        if (! empty($_POST['bulk_raccolta_id'])) {
+            $fields['raccolta_fondi_id'] = absint(wp_unslash($_POST['bulk_raccolta_id']));
         }
-        if (!empty($_POST['bulk_anagrafica_id'])) {
-            $fields['anagrafica_id'] = (int) $_POST['bulk_anagrafica_id'];
+        if (! empty($_POST['bulk_anagrafica_id'])) {
+            $fields['anagrafica_id'] = absint(wp_unslash($_POST['bulk_anagrafica_id']));
         }
 
         if (empty($fields)) {

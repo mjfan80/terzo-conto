@@ -39,7 +39,7 @@ class TerzoConto_Admin_Anagrafiche {
         $this->submitted_anagrafica = $data;
 
         if ($action === 'update_anagrafica') {
-            $submitted_id = absint($_POST['id'] ?? 0);
+            $submitted_id = absint(wp_unslash($_POST['id'] ?? 0));
             if ($submitted_id > 0) {
                 $this->submitted_anagrafica['id'] = $submitted_id;
             }
@@ -57,7 +57,7 @@ class TerzoConto_Admin_Anagrafiche {
         }
 
         if ($action === 'update_anagrafica') {
-            $id = absint($_POST['id'] ?? 0);
+            $id = absint(wp_unslash($_POST['id'] ?? 0));
             $updated = $id > 0 ? $this->anagrafiche_repository->update($id, $data) : false;
             $status = $updated ? 'updated' : 'error';
             wp_safe_redirect(add_query_arg('tc_anagrafica_status', $status, admin_url('admin.php?page=terzoconto-anagrafiche')));
