@@ -26,12 +26,25 @@ if (! is_wp_error($terms) && ! empty($terms)) {
     }
 }
 
-$wpdb->query(
+$taxonomy = 'terzoconto_allegato_movimento';
+
+// Recupera tutti i term_taxonomy_id della taxonomy
+$term_taxonomy_ids = $wpdb->get_col(
     $wpdb->prepare(
-        "DELETE FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s",
-        'terzoconto_allegato_movimento'
+        "SELECT term_taxonomy_id FROM {$wpdb->term_taxonomy} WHERE taxonomy = %s",
+        $taxonomy
     )
 );
+
+if (! empty($term_taxonomy_ids)) {
+    $ids = implode(',', array_map('intval', $term_taxonomy_ids));
+
+    // Cancella relazioni
+    $wpdb->query("DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ($ids)");
+
+    // Cancella taxonomy
+    $wpdb->query("DELETE FROM {$wpdb->term_taxonomy} WHERE term_taxonomy_id IN ($ids)");
+}
 
 $tables = [
     $wpdb->prefix . 'terzoconto_movimenti',
