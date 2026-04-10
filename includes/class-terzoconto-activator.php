@@ -6,7 +6,7 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Activator {
     public static function activate(): void {
-        TerzoConto_Installer::install_or_update();
+        TerzoConto_Installer::install();
         flush_rewrite_rules();
     }
 
