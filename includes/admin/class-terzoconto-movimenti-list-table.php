@@ -155,10 +155,10 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         ];
 
         // Leggiamo i parametri dall'URL, con fallback predefinito su data_movimento
-        $orderby_key = sanitize_text_field($_GET['orderby'] ?? 'data_movimento');
+        $orderby_key = sanitize_text_field(wp_unslash($_GET['orderby'] ?? 'data_movimento'));
         $orderby     = $allowed_orderby[$orderby_key] ?? 'm.data_movimento';
 
-        $order_key   = strtoupper(sanitize_text_field($_GET['order'] ?? 'DESC'));
+        $order_key   = strtoupper(sanitize_text_field(wp_unslash($_GET['order'] ?? 'DESC')));
         $order       = in_array($order_key, ['ASC', 'DESC'], true) ? $order_key : 'DESC';
 
         // Ordinamento secondario di sicurezza (se due date sono uguali, ordina per ID)
