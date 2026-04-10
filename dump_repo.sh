@@ -6,9 +6,10 @@ OUTPUT_FILE="repo_dump.txt"
 # Directory base (default: corrente)
 BASE_DIR="${1:-.}"
 
-# Pattern da escludere
+# Directory da escludere
 EXCLUDE_DIRS=(
   ".git"
+  ".github"
   "node_modules"
   "vendor"
   "dist"
@@ -17,7 +18,11 @@ EXCLUDE_DIRS=(
   ".cache"
 )
 
+# File/pattern da escludere
 EXCLUDE_FILES=(
+  "LICENSE"
+  "dump_repo.sh"
+  ".gitignore"
   "*.lock"
   "*.log"
   "*.zip"
@@ -34,11 +39,9 @@ EXCLUDE_FILES=(
   "*.mp3"
   "*.woff"
   "*.woff2"
-  "*.LICENSE*"
   "istruzioni.txt"
   "ARCHITECTURE.md"
   "DEVELOPMENT_PLAN.md"
-  "*.gitignore*"
 )
 
 # Costruzione dinamica dei parametri find
