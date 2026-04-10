@@ -1611,8 +1611,8 @@ class TerzoConto_Admin {
 
 		$result = $this->movimenti_service->create($data);
 
-		if (! $result['success']) {
-			add_settings_error('terzoconto', 'create_error', (string) ($result['error'] ?? __('Errore creazione movimento', 'terzo-conto')), 'error');
+		if (is_wp_error($result)) {
+			add_settings_error('terzoconto', 'create_error', $result->get_error_message(), 'error');
 			return;
 		}
 
@@ -1629,8 +1629,8 @@ class TerzoConto_Admin {
 
 		$result = $this->movimenti_service->update($id, $data);
 
-		if (! $result['success']) {
-			add_settings_error('terzoconto', 'update_error', (string) ($result['error'] ?? __('Errore aggiornamento movimento', 'terzo-conto')), 'error');
+		if (is_wp_error($result)) {
+			add_settings_error('terzoconto', 'update_error', $result->get_error_message(), 'error');
 			return;
 		}
 

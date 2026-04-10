@@ -34,11 +34,12 @@ class TerzoConto_Movimenti_Repository {
 
     public function create(array $data): bool {
         global $wpdb;
+        $this->last_error = '';
         $year = (int) gmdate('Y', strtotime($data['data_movimento']));
         $progressivo = $this->next_progressivo($year);
         $now = current_time('mysql');
 
-        return (bool) $wpdb->insert($this->table, [
+        $created = (bool) $wpdb->insert($this->table, [
             'progressivo_annuale' => $progressivo,
             'anno' => $year,
             'data_movimento' => $data['data_movimento'],
@@ -54,6 +55,12 @@ class TerzoConto_Movimenti_Repository {
             'created_at' => $now,
             'updated_at' => $now,
         ], ['%d', '%d', '%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s']);
+
+        if (! $created && $wpdb->last_error !== '') {
+            $this->last_error = $wpdb->last_error;
+        }
+
+        return $created;
     }
 
     public function update(int $id, array $data): bool {
@@ -74,7 +81,7 @@ class TerzoConto_Movimenti_Repository {
             return false;
         }
 
-        return false !== $wpdb->update(
+        $updated = false !== $wpdb->update(
             $this->table,
             [
                 'data_movimento' => $data['data_movimento'],
@@ -92,6 +99,12 @@ class TerzoConto_Movimenti_Repository {
             ['%s', '%f', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%s'],
             ['%d']
         );
+
+        if (! $updated && $this->last_error === '' && $wpdb->last_error !== '') {
+            $this->last_error = $wpdb->last_error;
+        }
+
+        return $updated;
     }
 
     private function next_progressivo(int $year): int {
