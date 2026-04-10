@@ -246,21 +246,35 @@ class TerzoConto_Admin {
     }
 
     public function enqueue_assets(string $hook): void {
-		if ($hook !== 'toplevel_page_terzoconto') {
+		$plugin_pages = [
+			'toplevel_page_terzoconto',
+			'terzoconto_page_terzoconto-categorie',
+			'terzoconto_page_terzoconto-conti',
+			'terzoconto_page_terzoconto-raccolte',
+			'terzoconto_page_terzoconto-import',
+			'terzoconto_page_terzoconto-report',
+		];
+
+		if (! in_array($hook, $plugin_pages, true)) {
 			return;
 		}
+
+		$select2_version = '4.1.0-rc.0';
+		$select2_base_url = TERZOCONTO_PLUGIN_URL . 'assets/vendor/select2/';
 
 		// SELECT2
 		wp_enqueue_style(
 			'select2',
-			'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css'
+			$select2_base_url . 'select2.min.css',
+			[],
+			$select2_version
 		);
 
 		wp_enqueue_script(
 			'select2',
-			'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+			$select2_base_url . 'select2.min.js',
 			['jquery'],
-			null,
+			$select2_version,
 			true
 		);
 
