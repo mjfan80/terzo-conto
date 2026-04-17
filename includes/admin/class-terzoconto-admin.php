@@ -44,7 +44,15 @@ class TerzoConto_Admin {
 
     public function register_menu(): void {
         $cap = 'manage_options';
-        add_menu_page('TerzoConto', 'TerzoConto', $cap, 'terzoconto', [$this, 'render_movimenti'], 'dashicons-ledger', 30);
+        add_menu_page(
+            esc_html__('TerzoConto', 'terzo-conto'),
+            esc_html__('TerzoConto', 'terzo-conto'),
+            $cap,
+            'terzoconto',
+            [$this, 'render_movimenti'],
+            'dashicons-ledger',
+            30
+        );
         add_submenu_page('terzoconto', __('Movimenti', 'terzo-conto'), __('Movimenti', 'terzo-conto'), $cap, 'terzoconto', [$this, 'render_movimenti']);
         add_submenu_page('terzoconto', __('Categorie', 'terzo-conto'), __('Categorie', 'terzo-conto'), $cap, 'terzoconto-categorie', [$this, 'render_categorie']);
         add_submenu_page('terzoconto', __('Conti', 'terzo-conto'), __('Conti', 'terzo-conto'), $cap, 'terzoconto-conti', [$this, 'render_conti']);
@@ -54,6 +62,9 @@ class TerzoConto_Admin {
     }
 
     public function handle_post_actions(): void {
+        if (! current_user_can('manage_options')) {
+            return;
+        }
 		
         // Recuperiamo l'azione sia da POST che da GET (per far funzionare i link come "Annulla")
         $action = '';
@@ -432,7 +443,6 @@ class TerzoConto_Admin {
             wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
         }
 
-        $modello_d = $this->categorie->get_modello_d();
         $categorie = $this->categorie->get_associazione();
 
         echo '<div class="wrap"><h1>' . esc_html__('Categorie', 'terzo-conto') . '</h1>';
@@ -440,9 +450,9 @@ class TerzoConto_Admin {
 		wp_nonce_field('terzoconto_action_nonce');
 		echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
 		echo '<p><select name="provider">
-		<option value="generico">CSV generico</option>
-		<option value="paypal">CSV PayPal</option>
-		<option value="satispay">CSV Satispay</option>
+		<option value="generico">' . esc_html__('CSV generico', 'terzo-conto') . '</option>
+		<option value="paypal">' . esc_html__('CSV PayPal', 'terzo-conto') . '</option>
+		<option value="satispay">' . esc_html__('CSV Satispay', 'terzo-conto') . '</option>
 		</select></p>';
 		echo '<p><input type="file" name="csv_file" accept=".csv" required /></p>';
 		submit_button(__('Carica e anteprima', 'terzo-conto'));
@@ -811,11 +821,11 @@ class TerzoConto_Admin {
 
         // CONTROLLI (NON STAMPABILI)
         echo '<div class="tc-no-print" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">';
-        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> Stampa PDF</button></h1>';
+        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> ' . esc_html__('Stampa PDF', 'terzo-conto') . '</button></h1>';
         
         echo '<h2 class="nav-tab-wrapper">';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">Modello D (Rendiconto per Cassa)</a>';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">Report Raccolte Fondi</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">' . esc_html__('Modello D (Rendiconto per Cassa)', 'terzo-conto') . '</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">' . esc_html__('Report Raccolte Fondi', 'terzo-conto') . '</a>';
         echo '</h2>';
         echo '</div>'; // Fine area no-print
 
@@ -826,14 +836,14 @@ class TerzoConto_Admin {
             echo '<form method="get" style="display:inline-block; margin-right: 20px;">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="modello_d" />
-                    <strong>Anno di riferimento:</strong> <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />
-                    ' . get_submit_button('Aggiorna', 'secondary', '', false) . '
+                    <strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong> <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />
+                    ' . get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false) . '
                   </form>';
             // Form esportazione backup (lo teniamo qui)
             echo '<form method="post" style="display:inline-block;">';
             wp_nonce_field('terzoconto_action_nonce');
             echo '<input type="hidden" name="terzoconto_action" value="export_movimenti_csv" />';
-            submit_button('Backup Movimenti CSV', 'secondary', '', false);
+            submit_button(__('Backup Movimenti CSV', 'terzo-conto'), 'secondary', '', false);
             echo '</form>';
             echo '</div>';
 
@@ -880,8 +890,8 @@ class TerzoConto_Admin {
                     if (isset($uscite[$i])) {
                         $u = $uscite[$i];
                         echo '<td>' . esc_html((string) $u['numero']) . ') ' . esc_html($u['nome']) . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($u['corrente'], 2, ',', '.') . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($u['precedente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $u['corrente'], 2, ',', '.')) . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $u['precedente'], 2, ',', '.')) . '</td>';
                         $tot_u_corr += $u['corrente']; $tot_u_prec += $u['precedente'];
                     } else {
                         echo '<td></td><td></td><td></td>';
@@ -891,8 +901,8 @@ class TerzoConto_Admin {
                     if (isset($entrate[$i])) {
                         $e = $entrate[$i];
                         echo '<td>' . esc_html((string) $e['numero']) . ') ' . esc_html($e['nome']) . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($e['corrente'], 2, ',', '.') . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($e['precedente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $e['corrente'], 2, ',', '.')) . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $e['precedente'], 2, ',', '.')) . '</td>';
                         $tot_e_corr += $e['corrente']; $tot_e_prec += $e['precedente'];
                     } else {
                         echo '<td></td><td></td><td></td>';
@@ -943,11 +953,11 @@ class TerzoConto_Admin {
             echo '<form method="get">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="raccolte" />
-                    <strong>Seleziona Raccolta:</strong> <select name="raccolta_id">';
+                    <strong>' . esc_html__('Seleziona Raccolta:', 'terzo-conto') . '</strong> <select name="raccolta_id">';
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-            echo '</select> ' . get_submit_button('Mostra Report', 'secondary', '', false) . '
+            echo '</select> ' . get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false) . '
                   </form></div>';
 
             if ($raccolta_id > 0) {
@@ -1030,31 +1040,31 @@ class TerzoConto_Admin {
 		echo '<div class="terzoconto-movimento-grid">';
 
 		// DATA
-		echo '<p><label>Data movimento</label><br />
+		echo '<p><label>' . esc_html__('Data movimento', 'terzo-conto') . '</label><br />
 			<input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
 
 		// IMPORTO
-		echo '<p><label>Importo</label><br />
+		echo '<p><label>' . esc_html__('Importo', 'terzo-conto') . '</label><br />
 			<input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
 
 		// TIPO
 		$tipo = $movimento['tipo'] ?? 'entrata';
-		echo '<p><label>Tipo</label><br />
+		echo '<p><label>' . esc_html__('Tipo', 'terzo-conto') . '</label><br />
 			<select name="tipo">
-				<option value="entrata"' . selected($tipo, 'entrata', false) . '>Entrata</option>
-				<option value="uscita"' . selected($tipo, 'uscita', false) . '>Uscita</option>
+				<option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
+				<option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 			</select></p>';
 
 		// CATEGORIA
 		$selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
-		echo '<p><label>Categoria</label><br />';
+		echo '<p><label>' . esc_html__('Categoria', 'terzo-conto') . '</label><br />';
 		echo $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true);
 		echo '</p>';
 
 		// CONTO
 		$selected_conto = (int) ($movimento['conto_id'] ?? 0);
-		echo '<p><label>Conto</label><br /><select name="conto_id" required>';
-		echo '<option value="0">Seleziona conto</option>';
+		echo '<p><label>' . esc_html__('Conto', 'terzo-conto') . '</label><br /><select name="conto_id" required>';
+		echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
 		foreach ($conti as $conto) {
 			echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
 				. esc_html($conto['nome']) .
@@ -1063,8 +1073,8 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// RACCOLTA (GIÀ CORRETTA)
-		echo '<p><label>Raccolta fondi</label><br /><select name="raccolta_fondi_id">';
-		echo '<option value="0">Nessuna raccolta</option>';
+		echo '<p><label>' . esc_html__('Raccolta fondi', 'terzo-conto') . '</label><br /><select name="raccolta_fondi_id">';
+		echo '<option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
 		$selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
 		foreach ($raccolte as $raccolta) {
 			echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
@@ -1074,7 +1084,7 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		//ANAGRAFICA (FIX VERO)
-		echo '<p><label>Anagrafica</label><br />';
+		echo '<p><label>' . esc_html__('Anagrafica', 'terzo-conto') . '</label><br />';
 		echo '<select name="anagrafica_id" id="terzoconto-anagrafica-select">';
 
 		echo '<option value="0"></option>'; // per allowClear
@@ -1092,19 +1102,19 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// DESCRIZIONE
-		echo '<p><label>Descrizione</label><br />
+		echo '<p><label>' . esc_html__('Descrizione', 'terzo-conto') . '</label><br />
 			<input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
 			
 		$stato_selezionato = $movimento['stato'] ?? 'attivo';
-		echo '<p><label>Stato del Movimento</label><br />
+		echo '<p><label>' . esc_html__('Stato del Movimento', 'terzo-conto') . '</label><br />
 			<select name="stato">
-				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>Attivo</option>
-				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>Annullato</option>
+				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>' . esc_html__('Attivo', 'terzo-conto') . '</option>
+				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>' . esc_html__('Annullato', 'terzo-conto') . '</option>
 			</select></p>';
 
 		echo '</div>';
 
-		submit_button($is_edit ? 'Aggiorna movimento' : 'Aggiungi movimento');
+		submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
 
 		echo '</form><hr />';
 	}
@@ -1133,7 +1143,7 @@ class TerzoConto_Admin {
 
 	    $html = '<select name="'.esc_attr($name).'" '.($required ? 'required' : '').'>';
 	
-	    $html .= '<option value="">-- categoria --</option>';
+	    $html .= '<option value="">' . esc_html__('-- categoria --', 'terzo-conto') . '</option>';
 	
 	    $grouped_categories = [];
 	
@@ -1326,8 +1336,8 @@ class TerzoConto_Admin {
             $data_movimento = sanitize_text_field(wp_unslash($row['data_movimento'] ?? ''));
             $importo = (float) str_replace(',', '.', (string) wp_unslash($row['importo'] ?? '0'));
             $tipo = sanitize_text_field(wp_unslash($row['tipo'] ?? ''));
-            $categoria_id = (int) ($row['categoria_id'] ?? 0);
-            $conto_id = (int) ($row['conto_id'] ?? 0);
+            $categoria_id = absint(wp_unslash($row['categoria_id'] ?? 0));
+            $conto_id = absint(wp_unslash($row['conto_id'] ?? 0));
             $descrizione = sanitize_text_field(wp_unslash($row['descrizione'] ?? ''));
 
             if (! $this->validator->is_valid_date($data_movimento)) {
@@ -1777,13 +1787,13 @@ class TerzoConto_Admin {
 			</p>
 
 			<p>
-				<a href="https://github.com/sponsors/mjfan80" target="_blank" class="button button-primary">
+				<a href="<?php echo esc_url('https://github.com/sponsors/mjfan80'); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary">
 					<?php echo esc_html__('❤️ GitHub Sponsors', 'terzo-conto'); ?>
 				</a>
 			</p>
 
 			<p>
-				<a href="https://www.buymeacoffee.com/gabrieleprandini" target="_blank" class="button">
+				<a href="<?php echo esc_url('https://www.buymeacoffee.com/gabrieleprandini'); ?>" target="_blank" rel="noopener noreferrer" class="button">
 					<?php echo esc_html__('☕ Offrimi un caffè', 'terzo-conto'); ?>
 				</a>
 			</p>
