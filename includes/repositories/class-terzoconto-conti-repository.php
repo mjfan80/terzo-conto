@@ -16,20 +16,41 @@ class TerzoConto_Conti_Repository {
 
     public function get_all(): array {
         global $wpdb;
+        $table = esc_sql($this->table);
+
         return $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM {$this->table} WHERE %d = %d ORDER BY nome ASC", 1, 1),
+            "SELECT * FROM $table ORDER BY nome ASC",
             ARRAY_A
         ) ?: [];
     }
 
     public function find_by_id(int $id): ?array {
         global $wpdb;
-        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
+
+        $id = absint($id);
+        if ($id <= 0) {
+            return null;
+        }
+        $table = esc_sql($this->table);
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM $table WHERE id = %d",
+                $id
+            ),
+            ARRAY_A
+        );
+
         return is_array($row) ? $row : null;
     }
 
     public function create(string $nome, string $descrizione, int $tracciabile = 0, int $attivo = 1): bool {
         global $wpdb;
+
+        $descrizione = sanitize_textarea_field($descrizione);
+        $tracciabile = absint($tracciabile);
+        $attivo = absint($attivo);
+
         return (bool) $wpdb->insert(
             $this->table,
             [
@@ -44,6 +65,16 @@ class TerzoConto_Conti_Repository {
 
     public function update(int $id, string $nome, string $descrizione, int $tracciabile, int $attivo): bool {
         global $wpdb;
+
+        $id = absint($id);
+        if ($id <= 0) {
+            return false;
+        }
+
+        $descrizione = sanitize_textarea_field($descrizione);
+        $tracciabile = absint($tracciabile);
+        $attivo = absint($attivo);
+
         return false !== $wpdb->update(
             $this->table,
             [
@@ -60,9 +91,16 @@ class TerzoConto_Conti_Repository {
 
     public function count_movimenti(int $conto_id): int {
         global $wpdb;
+
+        $conto_id = absint($conto_id);
+        if ($conto_id <= 0) {
+            return 0;
+        }
+        $movimenti_table = esc_sql($this->movimenti_table);
+
         return (int) $wpdb->get_var(
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$this->movimenti_table} WHERE conto_id = %d",
+                "SELECT COUNT(*) FROM $movimenti_table WHERE conto_id = %d",
                 $conto_id
             )
         );
@@ -74,6 +112,11 @@ class TerzoConto_Conti_Repository {
 
     public function delete(int $id): bool {
         global $wpdb;
+
+        $id = absint($id);
+        if ($id <= 0) {
+            return false;
+        }
 
         if (! $this->can_delete($id)) {
             return false;
