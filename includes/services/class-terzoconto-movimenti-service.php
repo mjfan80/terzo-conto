@@ -12,6 +12,7 @@ class TerzoConto_Movimenti_Service {
     }
 
     public function create(array $data) {
+        $data = $this->sanitize_movimento_data($data);
         $validation = $this->validate($data);
 
         if (is_wp_error($validation)) {
@@ -29,10 +30,12 @@ class TerzoConto_Movimenti_Service {
     }
 
     public function update(int $id, array $data) {
+        $id = absint($id);
         if ($id <= 0) {
             return new WP_Error('invalid_id', __('ID non valido', 'terzo-conto'));
         }
 
+        $data = $this->sanitize_movimento_data($data);
         $validation = $this->validate($data, $id);
 
         if (is_wp_error($validation)) {
@@ -54,7 +57,7 @@ class TerzoConto_Movimenti_Service {
             return new WP_Error('invalid_data_movimento', __('Inserisci una data movimento valida.', 'terzo-conto'));
         }
 
-        if ((float) ($data['importo'] ?? 0) <= 0) {
+        if ((float) ($data['importo'] ?? 0.0) <= 0.0) {
             return new WP_Error('invalid_importo', __('Inserisci un importo maggiore di zero.', 'terzo-conto'));
         }
 
@@ -66,7 +69,11 @@ class TerzoConto_Movimenti_Service {
             return new WP_Error('invalid_conto', __('Seleziona un conto valido.', 'terzo-conto'));
         }
 
-        $raccolta_id = (int) ($data['raccolta_fondi_id'] ?? 0);
+        if (isset($data['tipo']) && $data['tipo'] !== '' && ! in_array((string) $data['tipo'], ['entrata', 'uscita'], true)) {
+            return new WP_Error('invalid_tipo', __('Tipo movimento non valido.', 'terzo-conto'));
+        }
+
+        $raccolta_id = absint((int) ($data['raccolta_fondi_id'] ?? 0));
         if ($raccolta_id > 0 && ! $this->raccolte->is_open($raccolta_id)) {
             return new WP_Error('raccolta_chiusa', __('La raccolta fondi è chiusa.', 'terzo-conto'));
         }
@@ -78,7 +85,12 @@ class TerzoConto_Movimenti_Service {
             }
 
             $current_year = (int) ($current['anno'] ?? 0);
-            $new_year = (int) gmdate('Y', strtotime((string) $data['data_movimento']));
+            $new_timestamp = strtotime((string) $data['data_movimento']);
+            if ($new_timestamp === false) {
+                return new WP_Error('invalid_data_movimento', __('Inserisci una data movimento valida.', 'terzo-conto'));
+            }
+
+            $new_year = (int) gmdate('Y', $new_timestamp);
 
             if ($current_year > 0 && $new_year !== $current_year) {
                 return new WP_Error('invalid_anno_change', __("Non è possibile modificare l'anno di un movimento. Eliminare il movimento e crearne uno nuovo.", 'terzo-conto'));
@@ -92,5 +104,29 @@ class TerzoConto_Movimenti_Service {
         $date = DateTime::createFromFormat('Y-m-d', $value);
 
         return $date instanceof DateTime && $date->format('Y-m-d') === $value;
+    }
+
+    private function sanitize_movimento_data(array $data): array {
+        $sanitized = [];
+
+        $sanitized['data_movimento'] = sanitize_text_field((string) ($data['data_movimento'] ?? ''));
+        $sanitized['importo'] = floatval((string) ($data['importo'] ?? 0));
+        $sanitized['categoria_associazione_id'] = absint((int) ($data['categoria_associazione_id'] ?? 0));
+        $sanitized['conto_id'] = absint((int) ($data['conto_id'] ?? 0));
+        $sanitized['raccolta_fondi_id'] = absint((int) ($data['raccolta_fondi_id'] ?? 0));
+
+        if (array_key_exists('descrizione', $data)) {
+            $sanitized['descrizione'] = sanitize_text_field((string) $data['descrizione']);
+        }
+
+        if (array_key_exists('tipo', $data)) {
+            $sanitized['tipo'] = sanitize_key((string) $data['tipo']);
+        }
+
+        if (array_key_exists('note', $data)) {
+            $sanitized['note'] = sanitize_textarea_field((string) $data['note']);
+        }
+
+        return $sanitized;
     }
 }

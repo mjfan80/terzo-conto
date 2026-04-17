@@ -6,6 +6,8 @@ if (! defined('ABSPATH')) {
 
 class TerzoConto_Import_Service {
     public function parse_csv(string $file_path, string $provider = 'generico'): array {
+        $provider = sanitize_key($provider);
+
         if ($provider !== 'generico') {
             return $this->parse_provider_csv($file_path, $provider);
         }
@@ -17,11 +19,19 @@ class TerzoConto_Import_Service {
         $dupes = [];
 
         foreach ($rows as $idx => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
             if (! empty($row['errors'])) {
                 continue;
             }
 
             foreach ($existing_movements as $movement) {
+                if (! is_array($movement)) {
+                    continue;
+                }
+
                 if (
                     (string) ($movement['data_movimento'] ?? '') === (string) ($row['data_movimento'] ?? '')
                     && (float) ($movement['importo'] ?? 0) === (float) ($row['importo'] ?? 0)
@@ -38,8 +48,8 @@ class TerzoConto_Import_Service {
     }
 
     public function get_valid_rows(array $rows): array {
-        return array_values(array_filter($rows, static function (array $row): bool {
-            return empty($row['errors']);
+        return array_values(array_filter($rows, static function ($row): bool {
+            return is_array($row) && empty($row['errors']);
         }));
     }
 
@@ -88,13 +98,14 @@ class TerzoConto_Import_Service {
         }
     
         $header = fgetcsv($handle, 0, ',');
-        if (! $header) {
+        if (! is_array($header)) {
             fclose($handle);
             return $rows;
         }
-    
+
         while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            $row = array_combine($header, $data);
+            $row_data = array_slice(array_pad($data, count($header), ''), 0, count($header));
+            $row = array_combine($header, $row_data);
             if (! is_array($row)) {
                 continue;
             }
@@ -202,11 +213,16 @@ class TerzoConto_Import_Service {
     }
 
     private function open_csv_file(string $file_path) {
-        if (! file_exists($file_path)) {
+        $normalized_path = wp_normalize_path($file_path);
+        if (validate_file($normalized_path) !== 0) {
             return false;
         }
 
-        $handle = fopen($file_path, 'r');
+        if (! file_exists($normalized_path) || ! is_readable($normalized_path)) {
+            return false;
+        }
+
+        $handle = fopen($normalized_path, 'r');
         if ($handle === false) {
             return false;
         }
@@ -308,29 +324,42 @@ class TerzoConto_Import_Service {
     }
 
     private function normalize_row(array $row, string $provider): array {
+        $provider = sanitize_key($provider);
+
         if ($provider === 'paypal') {
+            $net = $this->parse_amount_value((string) ($row['Net'] ?? ''));
+
             return [
-                'data_movimento' => $row['Date'] ?? '',
-                'importo' => $row['Net'] ?? 0,
-                'tipo' => ((float) ($row['Net'] ?? 0)) < 0 ? 'uscita' : 'entrata',
-                'descrizione' => $row['Name'] ?? '',
+                'data_movimento' => $this->parse_date_value((string) ($row['Date'] ?? '')) ?? '',
+                'importo' => $net ?? 0.0,
+                'tipo' => ($net ?? 0.0) < 0 ? 'uscita' : 'entrata',
+                'descrizione' => (string) ($row['Name'] ?? ''),
             ];
         }
 
         if ($provider === 'satispay') {
+            $amount = $this->parse_amount_value((string) ($row['amount'] ?? ''));
+
             return [
-                'data_movimento' => $row['date'] ?? '',
-                'importo' => $row['amount'] ?? 0,
-                'tipo' => ((float) ($row['amount'] ?? 0)) < 0 ? 'uscita' : 'entrata',
-                'descrizione' => $row['description'] ?? '',
+                'data_movimento' => $this->parse_date_value((string) ($row['date'] ?? '')) ?? '',
+                'importo' => $amount ?? 0.0,
+                'tipo' => ($amount ?? 0.0) < 0 ? 'uscita' : 'entrata',
+                'descrizione' => (string) ($row['description'] ?? ''),
             ];
         }
 
+        $tipo = sanitize_key((string) ($row['tipo'] ?? ''));
+        if (! in_array($tipo, ['entrata', 'uscita'], true)) {
+            $tipo = 'entrata';
+        }
+
+        $importo = $this->parse_amount_value((string) ($row['importo'] ?? ''));
+
         return [
-            'data_movimento' => $row['data'] ?? $row['data_movimento'] ?? '',
-            'importo' => $row['importo'] ?? 0,
-            'tipo' => $row['tipo'] ?? 'entrata',
-            'descrizione' => $row['descrizione'] ?? '',
+            'data_movimento' => $this->parse_date_value((string) ($row['data'] ?? $row['data_movimento'] ?? '')) ?? '',
+            'importo' => $importo ?? 0.0,
+            'tipo' => $tipo,
+            'descrizione' => (string) ($row['descrizione'] ?? ''),
         ];
     }
 }
