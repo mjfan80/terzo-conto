@@ -374,7 +374,9 @@ class TerzoConto_Installer {
     private static function seed_defaults(): void {
         global $wpdb;
 
-        $prefix = $wpdb->prefix;
+        $categorie_modello_d_table = $wpdb->prefix . 'terzoconto_categorie_modello_d';
+        $categorie_associazione_table = $wpdb->prefix . 'terzoconto_categorie_associazione';
+        $conti_table = $wpdb->prefix . 'terzoconto_conti';
 
         $model_d = [
             ['A', 1, 'U', __('Materie prime, sussidiarie, di consumo e di merci', 'terzo-conto')],
@@ -432,7 +434,7 @@ class TerzoConto_Installer {
             $codice = $item[0] . (string) $item[1];
             $wpdb->query(
                 $wpdb->prepare(
-                    "INSERT IGNORE INTO {$prefix}terzoconto_categorie_modello_d (area, numero, tipo, codice, nome, ordinamento) VALUES (%s, %d, %s, %s, %s, %d)",
+                    "INSERT IGNORE INTO {$categorie_modello_d_table} (area, numero, tipo, codice, nome, ordinamento) VALUES (%s, %d, %s, %s, %s, %d)",
                     $item[0],
                     $item[1],
                     $item[2],
@@ -444,18 +446,18 @@ class TerzoConto_Installer {
         }
 
         $categorie_assoc_count = (int) $wpdb->get_var(
-            $wpdb->prepare("SELECT COUNT(*) FROM {$prefix}terzoconto_categorie_associazione WHERE %d = %d", 1, 1)
+            "SELECT COUNT(*) FROM {$categorie_associazione_table}"
         );
 
         if ($categorie_assoc_count === 0) {
             $model_d_rows = $wpdb->get_results(
-                $wpdb->prepare("SELECT id, nome FROM {$prefix}terzoconto_categorie_modello_d WHERE %d = %d ORDER BY ordinamento ASC", 1, 1),
+                "SELECT id, nome FROM {$categorie_modello_d_table} ORDER BY ordinamento ASC",
                 ARRAY_A
             ) ?: [];
 
             foreach ($model_d_rows as $row) {
                 $wpdb->insert(
-                    "{$prefix}terzoconto_categorie_associazione",
+                    $categorie_associazione_table,
                     [
                         'nome' => $row['nome'],
                         'modello_d_id' => (int) $row['id'],
@@ -470,10 +472,15 @@ class TerzoConto_Installer {
         $accounts = ['Cassa', 'Conto corrente', 'PayPal', 'Satispay'];
 
         foreach ($accounts as $account) {
-            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$prefix}terzoconto_conti WHERE nome = %s", $account));
+            $exists = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id FROM {$conti_table} WHERE nome = %s",
+                    $account
+                )
+            );
 
             if (! $exists) {
-                $wpdb->insert("{$prefix}terzoconto_conti", ['nome' => $account, 'attivo' => 1], ['%s', '%d']);
+                $wpdb->insert($conti_table, ['nome' => $account, 'attivo' => 1], ['%s', '%d']);
             }
         }
     }
