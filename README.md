@@ -1,4 +1,70 @@
-# Terzo Conto – Rendiconto ETS per WordPress
+# TerzoConto – ETS Accounting and Cash Reporting
+
+**TerzoConto** is a professional accounting system for Italian Third Sector Organizations (ETS) operating under **cash-based accounting**.  
+The plugin automates the chronological ledger and the generation of the **Cash Flow Statement (Model D)** in compliance with Italian Ministerial Decree (D.M. 5 March 2020).
+
+---
+
+## 🎯 Target
+
+Designed for:
+- Voluntary Organizations (ODV)
+- Social Promotion Associations (APS)
+- Small ETS (revenues under €220,000)
+
+It provides a structured yet simplified accounting system directly inside WordPress.
+
+---
+
+## ✨ Core Features
+
+- **Chronological Ledger:** automatic yearly progressive numbering  
+- **Official Reporting:** dynamic generation of Model D with year comparison  
+- **Accounting Integrity:** prevents deletion of accounts/funds linked to movements  
+- **Fundraising Management:** separate tracking + required reports (Art. 87 CTS)  
+- **Centralized Contacts:** donors, members, suppliers with tax code validation  
+- **CSV Import:** support for generic CSV, PayPal and Satispay with preview  
+
+---
+
+## 🛠 Architecture
+
+The plugin follows a **four-layer architecture**:
+
+1. UI/Admin Layer  
+2. Service Layer  
+3. Repository Layer  
+4. Reporting Engine  
+
+---
+
+## 🔄 Movement Flow
+
+1. User inserts a movement  
+2. Validation (date + fundraising status)  
+3. Progressive number calculation  
+4. Mapping to Model D  
+5. Database persistence  
+
+---
+
+## ⚠️ Limitations
+
+- Movements **cannot change fiscal year** after creation  
+- Cash accounting only (no accrual accounting)  
+- Limited extensibility (planned in future versions)
+
+---
+
+## ☕ Support the project
+
+Developed by **Gabriele Prandini (mjfan80)**  
+- https://github.com/sponsors/mjfan80  
+- https://www.buymeacoffee.com/gabrieleprandini  
+
+---
+
+## 🇮🇹 Versione italiana
 
 **Terzo Conto** è un sistema di gestione contabile professionale per Enti del Terzo Settore (ETS) che operano in **regime di cassa**. Il plugin automatizza la tenuta del registro cronologico e la generazione del **Rendiconto per Cassa (Modello D)** ai sensi del D.M. 5 marzo 2020.
 
