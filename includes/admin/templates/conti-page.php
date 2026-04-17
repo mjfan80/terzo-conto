@@ -45,8 +45,8 @@ $conto_attivo = absint($conto['attivo'] ?? 1);
         </div>
 
         <div class="terzoconto-conti-check-row">
-            <label title="<?php echo esc_attr__('Indica se il metodo di pagamento consente la tracciabilità fiscale (es. bonifico, carta, PayPal). Necessario per le erogazioni liberali detraibili.', 'terzo-conto'); ?>"><input type="checkbox" name="tracciabile" value="1" <?php echo checked($conto_tracciabile, 1, false); ?> /> <?php echo esc_html__('Tracciabile', 'terzo-conto'); ?></label>
-            <label><input type="checkbox" name="attivo" value="1" <?php echo checked($conto_attivo, 1, false); ?> /> <?php echo esc_html__('Attivo', 'terzo-conto'); ?></label>
+            <label title="<?php echo esc_attr__('Indica se il metodo di pagamento consente la tracciabilità fiscale (es. bonifico, carta, PayPal). Necessario per le erogazioni liberali detraibili.', 'terzo-conto'); ?>"><input type="checkbox" name="tracciabile" value="1" <?php checked($conto_tracciabile, 1); ?> /> <?php echo esc_html__('Tracciabile', 'terzo-conto'); ?></label>
+            <label><input type="checkbox" name="attivo" value="1" <?php checked($conto_attivo, 1); ?> /> <?php echo esc_html__('Attivo', 'terzo-conto'); ?></label>
         </div>
 
         <?php submit_button($is_edit ? esc_html__('Aggiorna conto', 'terzo-conto') : esc_html__('Aggiungi conto', 'terzo-conto')); ?>

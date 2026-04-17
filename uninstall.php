@@ -47,18 +47,35 @@ $term_ids = $wpdb->get_col(
 );
 
 if (! empty($term_taxonomy_ids)) {
-    $ids = implode(',', array_map('intval', $term_taxonomy_ids));
-
     if (! empty($term_ids)) {
-        $meta_ids = implode(',', array_map('intval', $term_ids));
-        $wpdb->query("DELETE FROM {$wpdb->termmeta} WHERE term_id IN ($meta_ids)");
+        $meta_ids = array_map('intval', $term_ids);
+        $meta_placeholders = implode(',', array_fill(0, count($meta_ids), '%d'));
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->termmeta} WHERE term_id IN ({$meta_placeholders})",
+                $meta_ids
+            )
+        );
     }
 
+    $ids = array_map('intval', $term_taxonomy_ids);
+    $ids_placeholders = implode(',', array_fill(0, count($ids), '%d'));
+
     // Cancella relazioni
-    $wpdb->query("DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ($ids)");
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->term_relationships} WHERE term_taxonomy_id IN ({$ids_placeholders})",
+            $ids
+        )
+    );
 
     // Cancella taxonomy
-    $wpdb->query("DELETE FROM {$wpdb->term_taxonomy} WHERE term_taxonomy_id IN ($ids)");
+    $wpdb->query(
+        $wpdb->prepare(
+            "DELETE FROM {$wpdb->term_taxonomy} WHERE term_taxonomy_id IN ({$ids_placeholders})",
+            $ids
+        )
+    );
 }
 
 $tables = [
@@ -74,7 +91,12 @@ $tables = [
 ];
 
 foreach ($tables as $table) {
-    $wpdb->query("DROP TABLE IF EXISTS {$table}"); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+    $wpdb->query(
+        $wpdb->prepare(
+            'DROP TABLE IF EXISTS %i',
+            $table
+        )
+    );
 }
 
 $options_to_delete = [

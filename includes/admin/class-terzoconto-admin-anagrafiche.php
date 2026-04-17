@@ -90,7 +90,7 @@ class TerzoConto_Admin_Anagrafiche {
 
     public function ajax_search_anagrafiche(): void {
         if (! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Non autorizzato.', 'terzo-conto')], 403);
+            wp_send_json_error(['message' => esc_html__('Non autorizzato.', 'terzo-conto')], 403);
         }
 
         check_ajax_referer('terzoconto_search_anagrafiche_nonce', 'nonce');
