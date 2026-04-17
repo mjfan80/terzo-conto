@@ -957,7 +957,7 @@ class TerzoConto_Admin {
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-                echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false)) . '
+                echo '</select> ' . get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false) . '
                   </form></div>';
 
             if ($raccolta_id > 0) {
