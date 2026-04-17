@@ -957,7 +957,7 @@ class TerzoConto_Admin {
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-            echo '</select> ' . get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false) . '
+                echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false)) . '
                   </form></div>';
 
             if ($raccolta_id > 0) {
@@ -970,7 +970,7 @@ class TerzoConto_Admin {
                 echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
                 echo '<br><h3>RENDICONTO DELLA SINGOLA RACCOLTA FONDI</h3>';
                 echo '<p><strong>' . esc_html($raccolta['nome']) . '</strong><br>';
-                echo 'Durata della raccolta: dal ' . esc_html(date('d/m/Y', strtotime($raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? date('d/m/Y', strtotime($raccolta['data_fine'])) : 'In corso') . '</p>';
+                echo 'Durata della raccolta: dal ' . esc_html(wp_date('d/m/Y', strtotime((string) $raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? wp_date('d/m/Y', strtotime((string) $raccolta['data_fine'])) : __('In corso', 'terzo-conto')) . '</p>';
                 echo '</div>';
 
                 echo '<div style="max-width: 600px; margin: 0 auto; font-family: sans-serif;">';
@@ -1003,7 +1003,7 @@ class TerzoConto_Admin {
                 echo '</div>';
                 
                 echo '<div style="margin-top: 60px; text-align: right;">';
-                echo '<p>Data: ' . esc_html(date('d/m/Y')) . '</p>';
+                echo '<p>Data: ' . esc_html(wp_date('d/m/Y')) . '</p>';
                 echo '<p>Firma del Rappresentante Legale<br>___________________________</p>';
                 echo '</div>';
                 
@@ -1058,7 +1058,22 @@ class TerzoConto_Admin {
 		// CATEGORIA
 		$selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
 		echo '<p><label>' . esc_html__('Categoria', 'terzo-conto') . '</label><br />';
-		echo $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true);
+		echo wp_kses(
+            $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true),
+            [
+                'select' => [
+                    'name' => true,
+                    'required' => true,
+                ],
+                'optgroup' => [
+                    'label' => true,
+                ],
+                'option' => [
+                    'value' => true,
+                    'selected' => true,
+                ],
+            ]
+        );
 		echo '</p>';
 
 		// CONTO
@@ -1754,10 +1769,14 @@ class TerzoConto_Admin {
 
         $ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
         $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_placeholders})";
-        $sql = $wpdb->prepare($sql, array_merge($set_values, $clean_ids));
         
         // 5. Esecuzione della Query
-        $updated = $wpdb->query($sql);
+        $updated = $wpdb->query(
+            $wpdb->prepare(
+                $sql,
+                array_merge($set_values, $clean_ids)
+            )
+        );
 
         // Trappola per errori MySQL
         if ($updated === false) {

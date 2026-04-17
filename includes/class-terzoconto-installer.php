@@ -99,14 +99,24 @@ class TerzoConto_Installer {
                 }
 
                 if (! self::column_exists($table, 'updated_at')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at");
+                    $result = $wpdb->query(
+                        $wpdb->prepare(
+                            'ALTER TABLE %i ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at',
+                            $table
+                        )
+                    );
                     if ($result === false) {
                         throw new RuntimeException(sprintf('Unable to add column updated_at to %s: %s', $table, $wpdb->last_error));
                     }
                 }
 
                 if (! self::index_exists($table, 'anno_progressivo')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX anno_progressivo (anno, progressivo_annuale)");
+                    $result = $wpdb->query(
+                        $wpdb->prepare(
+                            'ALTER TABLE %i ADD INDEX anno_progressivo (anno, progressivo_annuale)',
+                            $table
+                        )
+                    );
                     if ($result === false) {
                         throw new RuntimeException(sprintf('Unable to add index anno_progressivo to %s: %s', $table, $wpdb->last_error));
                     }
@@ -123,14 +133,24 @@ class TerzoConto_Installer {
                 }
 
                 if (! self::column_exists($table, 'codice_fiscale')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo");
+                    $result = $wpdb->query(
+                        $wpdb->prepare(
+                            'ALTER TABLE %i ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo',
+                            $table
+                        )
+                    );
                     if ($result === false) {
                         throw new RuntimeException(sprintf('Unable to add column codice_fiscale to %s: %s', $table, $wpdb->last_error));
                     }
                 }
 
                 if (! self::index_exists($table, 'codice_fiscale')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX codice_fiscale (codice_fiscale)");
+                    $result = $wpdb->query(
+                        $wpdb->prepare(
+                            'ALTER TABLE %i ADD INDEX codice_fiscale (codice_fiscale)',
+                            $table
+                        )
+                    );
                     if ($result === false) {
                         throw new RuntimeException(sprintf('Unable to add index codice_fiscale to %s: %s', $table, $wpdb->last_error));
                     }
