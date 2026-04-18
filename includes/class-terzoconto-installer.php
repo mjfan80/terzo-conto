@@ -243,12 +243,14 @@ class TerzoConto_Installer {
             return false;
         }
 
-        $table_name = esc_sql($table_name);
-        $sql = $wpdb->prepare(
-            "SHOW COLUMNS FROM `$table_name` LIKE %s",
-            $column_name
+       $table_name = esc_sql($table_name);
+
+        $result = $wpdb->get_var(
+            $wpdb->prepare(
+                "SHOW COLUMNS FROM `$table_name` LIKE %s",
+                $column_name
+            )
         );
-        $result = $wpdb->get_var($sql);
 
         return $result === $column_name;
     }
@@ -261,11 +263,11 @@ class TerzoConto_Installer {
         }
 
         $table_name = esc_sql($table_name);
-        $sql = $wpdb->prepare(
-            "SHOW INDEX FROM `$table_name` WHERE Key_name = %s",
-            $index_name
+        $result = $wpdb->get_var(
+             $wpdb->prepare(
+                "SHOW INDEX FROM `$table_name` WHERE Key_name = %s",
+            $index_name)
         );
-        $result = $wpdb->get_var($sql);
 
         return $result === $index_name;
     }
