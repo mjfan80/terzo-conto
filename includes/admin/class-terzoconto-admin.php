@@ -430,6 +430,7 @@ class TerzoConto_Admin {
         $bulk_status = sanitize_text_field(wp_unslash($_GET['tc_bulk'] ?? ''));
         if ($bulk_status === 'done') {
             $count = absint(wp_unslash($_GET['updated'] ?? 0));
+			/* translators: %d = number of movements updated */
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count)) . '</p></div>';
         } elseif ($bulk_status === 'no_ids') {
             echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
@@ -677,6 +678,7 @@ class TerzoConto_Admin {
 			$duplicates = $preview['duplicates'];
 
 			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
+			/* translators: 1: number of valid rows, 2: total rows */
 			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
@@ -1385,7 +1387,7 @@ class TerzoConto_Admin {
 		}
 
 		delete_transient($this->get_import_preview_transient_key());
-
+		/* translators: %d = number of imported movements */
 		add_settings_error('terzoconto', 'import_done', esc_html(sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported)), 'updated');
 	}
 
