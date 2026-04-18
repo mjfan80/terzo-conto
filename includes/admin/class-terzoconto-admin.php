@@ -712,7 +712,7 @@ class TerzoConto_Admin {
 				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][importo]" value="' . esc_attr($row['importo']) . '"></td>';
 
 				echo '<td>
-					<select name="rows['.$i.'][tipo]">
+					echo '<select name="rows[' . esc_attr($i) . '][tipo]">';
 						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
 						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 					</select>
@@ -720,7 +720,7 @@ class TerzoConto_Admin {
 
 				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
-				echo '<td>' . $this->render_categoria_select_html(
+				echo '<td>' . wp_kses_post($this->render_categoria_select_html(
 				    $categorie,
 				    'rows['.  esc_attr($i) .'][categoria_id]',
 				    0,
@@ -841,7 +841,7 @@ class TerzoConto_Admin {
 			    <strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
 			    <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
 			
-			echo get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false);
+			echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false));
 			
 			echo '</form>';
             // Form esportazione backup (lo teniamo qui)
@@ -962,7 +962,7 @@ class TerzoConto_Admin {
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-                echo '</select> ' . get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false) . '
+                echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false));
                   </form></div>';
 
             if ($raccolta_id > 0) {
@@ -1004,7 +1004,13 @@ class TerzoConto_Admin {
                 // Relazione Illustrativa
                 echo '<h4 style="margin-top: 40px;">RELAZIONE ILLUSTRATIVA</h4>';
                 echo '<div style="text-align: justify; line-height: 1.6;">';
-                echo wpautop(esc_html($raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'));
+                echo wp_kses_post(
+				    wpautop(
+				        esc_html(
+				            $raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'
+				        )
+				    )
+				);
                 echo '</div>';
                 
                 echo '<div style="margin-top: 60px; text-align: right;">';
