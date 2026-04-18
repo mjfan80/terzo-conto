@@ -55,56 +55,85 @@ class TerzoConto_Import_Service {
 
     private function parse_generic_csv(string $file_path): array {
         $rows = [];
-        $handle = $this->open_csv_file($file_path);
-
-        if (! is_resource($handle)) {
+    
+        $normalized_path = wp_normalize_path($file_path);
+        if (validate_file($normalized_path) !== 0 || ! file_exists($normalized_path)) {
             return $rows;
         }
-
-        $header = fgetcsv($handle, 0, ';');
+    
+        $lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
+    
+        if ($lines === false || count($lines) === 0) {
+            return $rows;
+        }
+    
+        $header = str_getcsv(array_shift($lines), ';');
+    
         if (! is_array($header)) {
-            fclose($handle);
             return $rows;
         }
-
+    
         $normalized_header = array_map([$this, 'normalize_header'], $header);
         $has_tipo = in_array('tipo', $normalized_header, true);
-
-        while (($data = fgetcsv($handle, 0, ';')) !== false) {
+    
+        foreach ($lines as $line) {
+            $data = str_getcsv($line, ';');
+    
             if ($this->is_empty_csv_row($data)) {
                 continue;
             }
-
-            $row_data = array_slice(array_pad($data, count($normalized_header), ''), 0, count($normalized_header));
+    
+            $row_data = array_slice(
+                array_pad($data, count($normalized_header), ''),
+                0,
+                count($normalized_header)
+            );
+    
             $row = array_combine($normalized_header, $row_data);
             if (! is_array($row)) {
                 $row = [];
             }
-
-            $rows[] = $this->build_generic_preview_row($row, $has_tipo, count($rows) + 1, count($data));
+    
+            $rows[] = $this->build_generic_preview_row(
+                $row,
+                $has_tipo,
+                count($rows) + 1,
+                count($data)
+            );
         }
-
-        fclose($handle);
-
+    
         return $rows;
     }
 
     private function parse_provider_csv(string $file_path, string $provider): array {
         $rows = [];
-        $handle = $this->open_csv_file($file_path);
     
-        if (! is_resource($handle)) {
+        $normalized_path = wp_normalize_path($file_path);
+        if (validate_file($normalized_path) !== 0 || ! file_exists($normalized_path)) {
             return $rows;
         }
     
-        $header = fgetcsv($handle, 0, ',');
+        $lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
+    
+        if ($lines === false || count($lines) === 0) {
+            return $rows;
+        }
+    
+        $header = str_getcsv(array_shift($lines), ',');
+    
         if (! is_array($header)) {
-            fclose($handle);
             return $rows;
         }
-
-        while (($data = fgetcsv($handle, 0, ',')) !== false) {
-            $row_data = array_slice(array_pad($data, count($header), ''), 0, count($header));
+    
+        foreach ($lines as $line) {
+            $data = str_getcsv($line, ',');
+    
+            $row_data = array_slice(
+                array_pad($data, count($header), ''),
+                0,
+                count($header)
+            );
+    
             $row = array_combine($header, $row_data);
             if (! is_array($row)) {
                 continue;
@@ -112,17 +141,13 @@ class TerzoConto_Import_Service {
     
             $normalized = $this->normalize_row($row, $provider);
     
-            // 👉 NORMALIZZAZIONE IMPORTO + TIPO
             $raw_importo = (float) ($normalized['importo'] ?? 0);
-    
-            // tipo coerente con segno SOLO se non già impostato correttamente
             $tipo = (string) ($normalized['tipo'] ?? '');
     
             if ($tipo === '') {
                 $tipo = $raw_importo < 0 ? 'uscita' : 'entrata';
             }
     
-            // 👉 IMPORTO SEMPRE POSITIVO
             $importo = abs($raw_importo);
     
             $rows[] = [
@@ -133,10 +158,9 @@ class TerzoConto_Import_Service {
                 'tipo' => $tipo,
                 'descrizione' => (string) ($normalized['descrizione'] ?? ''),
                 'errors' => [],
+                'raw' => $row,
             ];
         }
-    
-        fclose($handle);
     
         return $rows;
     }
