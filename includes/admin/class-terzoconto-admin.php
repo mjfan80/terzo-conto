@@ -1772,16 +1772,15 @@ class TerzoConto_Admin {
             }
         }
 
-        $ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
-        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_placeholders})";
-        
-        // 5. Esecuzione della Query
-        $updated = $wpdb->query(
-            $wpdb->prepare(
-                $sql,
-                array_merge($set_values, $clean_ids)
-            )
-        );
+        $table = esc_sql($table);
+		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
+		
+		$updated = $wpdb->query(
+		    $wpdb->prepare(
+		        "UPDATE $table SET " . implode(', ', $set_parts) . " WHERE id IN ($ids_placeholders)",
+		        ...array_merge($set_values, $clean_ids)
+		    )
+		);
 
         // Trappola per errori MySQL
         if ($updated === false) {
