@@ -91,12 +91,8 @@ $tables = [
 ];
 
 foreach ($tables as $table) {
-    $wpdb->query(
-        $wpdb->prepare(
-            'DROP TABLE IF EXISTS %i',
-            $table
-        )
-    );
+    $table = esc_sql($table);
+    $wpdb->query("DROP TABLE IF EXISTS {$table}");
 }
 
 $options_to_delete = [
