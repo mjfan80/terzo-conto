@@ -61,15 +61,19 @@ class TerzoConto_Report_Service {
         $mov_table = esc_sql($mov);
         $cat_assoc_table = esc_sql($cat_assoc);
         
-        $sql = $wpdb->prepare("
-            SELECT ca.modello_d_id, SUM(m.importo) as totale
-            FROM {$mov_table} m
-            JOIN {$cat_assoc_table} ca ON m.categoria_associazione_id = ca.id
-            WHERE m.anno = %d AND m.stato = 'attivo'
-            GROUP BY ca.modello_d_id
-        ", $year);
-
-        $results = $wpdb->get_results($sql, ARRAY_A);
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT ca.modello_d_id, SUM(m.importo) as totale
+                FROM {$mov_table} m
+                JOIN {$cat_assoc_table} ca ON m.categoria_associazione_id = ca.id
+                WHERE m.anno = %d AND m.stato = 'attivo'
+                GROUP BY ca.modello_d_id
+                ",
+                $year
+            ),
+            ARRAY_A
+        );
         $somme = [];
         if ($results) {
             foreach ($results as $row) {
@@ -88,18 +92,22 @@ class TerzoConto_Report_Service {
         $conti = $wpdb->prefix . 'terzoconto_conti';
 
         // Somma Entrate - Somma Uscite fino al 31/12 dell'anno
-        $sql = $wpdb->prepare("
-            SELECT c.nome, 
-                   SUM(CASE WHEN m.tipo = 'entrata' THEN m.importo ELSE 0 END) - 
-                   SUM(CASE WHEN m.tipo = 'uscita' THEN m.importo ELSE 0 END) as saldo
-            FROM {$mov} m
-            JOIN {$conti} c ON m.conto_id = c.id
-            WHERE m.anno <= %d AND m.stato = 'attivo'
-            GROUP BY c.id
-            ORDER BY c.nome ASC
-        ", $year);
-
-        return $wpdb->get_results($sql, ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT c.nome, 
+                       SUM(CASE WHEN m.tipo = 'entrata' THEN m.importo ELSE 0 END) - 
+                       SUM(CASE WHEN m.tipo = 'uscita' THEN m.importo ELSE 0 END) as saldo
+                FROM {$mov} m
+                JOIN {$conti} c ON m.conto_id = c.id
+                WHERE m.anno <= %d AND m.stato = 'attivo'
+                GROUP BY c.id
+                ORDER BY c.nome ASC
+                ",
+                $year
+            ),
+            ARRAY_A
+        ) ?: [];
     }
 
     /**
