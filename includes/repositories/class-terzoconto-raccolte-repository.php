@@ -30,8 +30,13 @@ class TerzoConto_Raccolte_Repository {
 
     public function get_aperte(): array {
         global $wpdb;
-        $sql = $wpdb->prepare("SELECT * FROM {$this->table} WHERE stato = %s ORDER BY data_inizio DESC", 'aperta');
-        return $wpdb->get_results($sql, ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$this->table} WHERE stato = %s ORDER BY data_inizio DESC",
+                'aperta'
+            ),
+            ARRAY_A
+        ) ?: [];
     }
 
     public function create(array $data): bool {
