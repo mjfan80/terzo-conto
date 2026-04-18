@@ -18,8 +18,11 @@ class TerzoConto_Report_Service {
 
         // Prendiamo TUTTE le voci del Modello D ufficiale (devono esserci tutte anche se a zero)
         $voci = $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM {$cat_mod} WHERE %d = %d ORDER BY area ASC, tipo DESC, numero ASC", 1, 1),
-            ARRAY_A
+            $table = esc_sql($cat_mod);
+            $voci = $wpdb->get_results(
+                "SELECT * FROM {$table} ORDER BY area ASC, tipo DESC, numero ASC",
+                ARRAY_A
+            );
         );
 
         // Calcoliamo i totali per l'anno corrente
@@ -56,10 +59,13 @@ class TerzoConto_Report_Service {
         $mov = $wpdb->prefix . 'terzoconto_movimenti';
         $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
 
+        $mov_table = esc_sql($mov);
+        $cat_assoc_table = esc_sql($cat_assoc);
+        
         $sql = $wpdb->prepare("
             SELECT ca.modello_d_id, SUM(m.importo) as totale
-            FROM {$mov} m
-            JOIN {$cat_assoc} ca ON m.categoria_associazione_id = ca.id
+            FROM {$mov_table} m
+            JOIN {$cat_assoc_table} ca ON m.categoria_associazione_id = ca.id
             WHERE m.anno = %d AND m.stato = 'attivo'
             GROUP BY ca.modello_d_id
         ", $year);
@@ -134,6 +140,7 @@ class TerzoConto_Report_Service {
     }
 
     public function export_csv_movimenti(array $movimenti): string {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
         $fh = fopen('php://temp', 'r+');
         fputcsv($fh, ['id', 'data_movimento', 'importo', 'tipo', 'descrizione', 'stato']);
         foreach ($movimenti as $row) {
