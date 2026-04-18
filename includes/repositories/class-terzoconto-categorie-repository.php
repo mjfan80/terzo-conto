@@ -41,8 +41,10 @@ class TerzoConto_Categorie_Repository {
 
     public function get_modello_d(): array {
         global $wpdb;
+        $table_modeld = esc_sql($this->table_modeld);
         return $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM {$this->table_modeld} WHERE %d = %d ORDER BY FIELD(tipo, 'U', 'E') ASC, area ASC, numero ASC", 1, 1),
+            "SELECT * FROM $table_modeld
+             ORDER BY FIELD(tipo, 'U', 'E') ASC, area ASC, numero ASC",
             ARRAY_A
         ) ?: [];
     }
