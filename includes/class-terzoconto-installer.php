@@ -105,7 +105,13 @@ class TerzoConto_Installer {
                         "ALTER TABLE {$table} ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at"
                     );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add column updated_at to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add column updated_at to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
 
@@ -115,7 +121,13 @@ class TerzoConto_Installer {
                         "ALTER TABLE {$table} ADD INDEX anno_progressivo (anno, progressivo_annuale)"
                     );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add index anno_progressivo to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add index anno_progressivo to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
             },
@@ -133,7 +145,13 @@ class TerzoConto_Installer {
                     $table = esc_sql($table); 
                     $result = $wpdb->query( "ALTER TABLE {$table} ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo" );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add column codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add column codice_fiscale to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
 
@@ -143,7 +161,13 @@ class TerzoConto_Installer {
                         "ALTER TABLE {$table} ADD INDEX codice_fiscale (codice_fiscale)"
                     );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add index codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add index codice_fiscale to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
             },
