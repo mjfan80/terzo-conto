@@ -705,9 +705,9 @@ class TerzoConto_Admin {
 
 				echo '<td>' . esc_html((string) ($i + 1)) . '</td>';
 
-				echo '<td><input type="date" name="rows['.$i.'][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
+				echo '<td><input type="date" name="rows[' . esc_attr($i) . '][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
 
-				echo '<td><input type="text" name="rows['.$i.'][importo]" value="' . esc_attr($row['importo']) . '"></td>';
+				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][importo]" value="' . esc_attr($row['importo']) . '"></td>';
 
 				echo '<td>
 					<select name="rows['.$i.'][tipo]">
@@ -716,16 +716,16 @@ class TerzoConto_Admin {
 					</select>
 				</td>';
 
-				echo '<td><input type="text" name="rows['.$i.'][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
+				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
 				echo '<td>' . $this->render_categoria_select_html(
 				    $categorie,
-				    'rows['.$i.'][categoria_id]',
+				    'rows['.  esc_attr($i) .'][categoria_id]',
 				    0,
 				    true
 				) . '</td>';
 				
-				echo '<td><select name="rows['.$i.'][conto_id]" required>';
+				echo '<td><select name="rows['.  esc_attr($i) .'][conto_id]" required>';
 				echo '<option value="">' . esc_html__('-- conto --', 'terzo-conto') . '</option>';
 
 				foreach ($conti as $conto) {
@@ -834,11 +834,14 @@ class TerzoConto_Admin {
             // === RENDER MODELLO D ===
             echo '<div class="tc-no-print" style="margin-bottom: 20px;">';
             echo '<form method="get" style="display:inline-block; margin-right: 20px;">
-                    <input type="hidden" name="page" value="terzoconto-report" />
-                    <input type="hidden" name="tab" value="modello_d" />
-                    <strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong> <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />
-                    ' . get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false) . '
-                  </form>';
+			    <input type="hidden" name="page" value="terzoconto-report" />
+			    <input type="hidden" name="tab" value="modello_d" />
+			    <strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
+			    <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
+			
+			echo get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false);
+			
+			echo '</form>';
             // Form esportazione backup (lo teniamo qui)
             echo '<form method="post" style="display:inline-block;">';
             wp_nonce_field('terzoconto_action_nonce');
