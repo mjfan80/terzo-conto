@@ -182,25 +182,26 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 		// 🔥 QUERY UNICA CON ORDINAMENTO DINAMICO
 		// Safe: dynamic ORDER BY parts are built only from vetted allowlists above.
 		$sql = "
-			SELECT 
-				m.*,
-				c.nome AS conto_nome,
-				md.tipo AS modello_tipo,
-				md.codice AS modello_codice,
-				r.nome AS raccolta_nome,
-				a.nome AS anagrafica_nome,
-				a.cognome AS anagrafica_cognome,
-				a.ragione_sociale AS anagrafica_rs,
-				a.tipo AS anagrafica_tipo
-			FROM $movimenti_table m
-			LEFT JOIN $conti_table c ON c.id = m.conto_id
-			LEFT JOIN $categorie_assoc ca ON ca.id = m.categoria_associazione_id
-			LEFT JOIN $categorie_modeld md ON md.id = ca.modello_d_id
-			LEFT JOIN $raccolte_table r ON r.id = m.raccolta_fondi_id
-			LEFT JOIN $anagrafiche_table a ON a.id = m.anagrafica_id
-			WHERE m.id >= 0
-			ORDER BY $orderby $order $fallback_order
+		    SELECT 
+		        m.*,
+		        c.nome AS conto_nome,
+		        md.tipo AS modello_tipo,
+		        md.codice AS modello_codice,
+		        r.nome AS raccolta_nome,
+		        a.nome AS anagrafica_nome,
+		        a.cognome AS anagrafica_cognome,
+		        a.ragione_sociale AS anagrafica_rs,
+		        a.tipo AS anagrafica_tipo
+		    FROM $movimenti_table m
+		    LEFT JOIN $conti_table c ON c.id = m.conto_id
+		    LEFT JOIN $categorie_assoc ca ON ca.id = m.categoria_associazione_id
+		    LEFT JOIN $categorie_modeld md ON md.id = ca.modello_d_id
+		    LEFT JOIN $raccolte_table r ON r.id = m.raccolta_fondi_id
+		    LEFT JOIN $anagrafiche_table a ON a.id = m.anagrafica_id
+		    WHERE m.id >= 0
+		    ORDER BY $orderby $order $fallback_order
 		";
+		
 		$results = $wpdb->get_results($sql, ARRAY_A) ?: [];
 
 		// 🔧 normalizzazione dati per la tabella
