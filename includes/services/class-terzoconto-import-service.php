@@ -237,26 +237,35 @@ class TerzoConto_Import_Service {
     }
 
     private function open_csv_file(string $file_path) {
+        global $wp_filesystem;
+    
+        if ( ! $wp_filesystem ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+    
         $normalized_path = wp_normalize_path($file_path);
+    
         if (validate_file($normalized_path) !== 0) {
             return false;
         }
-
-        if (! file_exists($normalized_path) || ! is_readable($normalized_path)) {
+    
+        if ( ! $wp_filesystem->exists($normalized_path) ) {
             return false;
         }
-
-        $handle = fopen($normalized_path, 'r');
-        if ($handle === false) {
+    
+        $content = $wp_filesystem->get_contents($normalized_path);
+    
+        if ($content === false) {
             return false;
         }
-
-        $first_bytes = fread($handle, 3);
-        if ($first_bytes !== "\xEF\xBB\xBF") {
-            rewind($handle);
+    
+        // Rimozione BOM UTF-8
+        if (substr($content, 0, 3) === "\xEF\xBB\xBF") {
+            $content = substr($content, 3);
         }
-
-        return $handle;
+    
+        return $content;
     }
 
     private function normalize_header(string $header): string {
