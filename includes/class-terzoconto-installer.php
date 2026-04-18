@@ -204,10 +204,11 @@ class TerzoConto_Installer {
 
     private static function table_exists(string $table_name): bool {
         global $wpdb;
-
-        $sql = $wpdb->prepare('SHOW TABLES LIKE %s', $table_name);
-        $found = $wpdb->get_var($sql);
-
+    
+        $found = $wpdb->get_var(
+            $wpdb->prepare('SHOW TABLES LIKE %s', $table_name)
+        );
+    
         return $found === $table_name;
     }
 
@@ -242,7 +243,11 @@ class TerzoConto_Installer {
             return false;
         }
 
-        $sql = $wpdb->prepare("SHOW COLUMNS FROM {$table_name} LIKE %s", $column_name);
+        $table_name = esc_sql($table_name);
+        $sql = $wpdb->prepare(
+            "SHOW COLUMNS FROM `$table_name` LIKE %s",
+            $column_name
+        );
         $result = $wpdb->get_var($sql);
 
         return $result === $column_name;
@@ -255,7 +260,11 @@ class TerzoConto_Installer {
             return false;
         }
 
-        $sql = $wpdb->prepare("SHOW INDEX FROM {$table_name} WHERE Key_name = %s", $index_name);
+        $table_name = esc_sql($table_name);
+        $sql = $wpdb->prepare(
+            "SHOW INDEX FROM `$table_name` WHERE Key_name = %s",
+            $index_name
+        );
         $result = $wpdb->get_var($sql);
 
         return $result === $index_name;
