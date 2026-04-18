@@ -1,5 +1,4 @@
 === TerzoConto ===
-= Italian Version Below =
 Contributors: mjfan80
 Tags: accounting, nonprofit, ets, csv, finance
 Requires at least: 6.0
