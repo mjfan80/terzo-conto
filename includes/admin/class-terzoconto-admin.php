@@ -430,7 +430,7 @@ class TerzoConto_Admin {
         $bulk_status = sanitize_text_field(wp_unslash($_GET['tc_bulk'] ?? ''));
         if ($bulk_status === 'done') {
             $count = absint(wp_unslash($_GET['updated'] ?? 0));
-			/* translators: %d = number of movements updated */
+			/* translators: %d = number of movements updated */										  
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count)) . '</p></div>';
         } elseif ($bulk_status === 'no_ids') {
             echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
@@ -678,7 +678,7 @@ class TerzoConto_Admin {
 			$duplicates = $preview['duplicates'];
 
 			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
-			/* translators: 1: number of valid rows, 2: total rows */
+			/* translators: 1: number of valid rows, 2: total rows */												
 			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
@@ -712,7 +712,7 @@ class TerzoConto_Admin {
 				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][importo]" value="' . esc_attr($row['importo']) . '"></td>';
 
 				echo '<td>
-					echo '<select name="rows[' . esc_attr($i) . '][tipo]">';
+					<select name="rows[' . esc_attr($i) . '][tipo]">
 						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
 						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 					</select>
@@ -720,11 +720,13 @@ class TerzoConto_Admin {
 
 				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
-				echo '<td>' . wp_kses_post($this->render_categoria_select_html(
-				    $categorie,
-				    'rows['.  esc_attr($i) .'][categoria_id]',
-				    0,
-				    true
+				echo '<td>' . wp_kses_post(
+					$this->render_categoria_select_html(
+						$categorie,
+						'rows[' . esc_attr($i) . '][categoria_id]',
+						0,
+						true
+					)
 				) . '</td>';
 				
 				echo '<td><select name="rows['.  esc_attr($i) .'][conto_id]" required>';
@@ -836,12 +838,12 @@ class TerzoConto_Admin {
             // === RENDER MODELLO D ===
             echo '<div class="tc-no-print" style="margin-bottom: 20px;">';
             echo '<form method="get" style="display:inline-block; margin-right: 20px;">
-			    <input type="hidden" name="page" value="terzoconto-report" />
-			    <input type="hidden" name="tab" value="modello_d" />
-			    <strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
-			    <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
+                    <input type="hidden" name="page" value="terzoconto-report" />
+                    <input type="hidden" name="tab" value="modello_d" />
+					<strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
+					<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
 			
-			echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false));
+            echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false));
 			
 			echo '</form>';
             // Form esportazione backup (lo teniamo qui)
@@ -962,8 +964,8 @@ class TerzoConto_Admin {
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-                echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false));
-                  </form></div>';
+            echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false));
+            echo      '</form></div>';
 
             if ($raccolta_id > 0) {
                 $raccolta = $this->raccolte->find_by_id($raccolta_id);
@@ -1004,7 +1006,7 @@ class TerzoConto_Admin {
                 // Relazione Illustrativa
                 echo '<h4 style="margin-top: 40px;">RELAZIONE ILLUSTRATIVA</h4>';
                 echo '<div style="text-align: justify; line-height: 1.6;">';
-                echo wp_kses_post(
+				echo wp_kses_post(
 				    wpautop(
 				        esc_html(
 				            $raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'
@@ -1778,9 +1780,8 @@ class TerzoConto_Admin {
             }
         }
 
-        $table = esc_sql($table);
+		$table = esc_sql($table);
 		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
-		
 		$updated = $wpdb->query(
 		    $wpdb->prepare(
 		        "UPDATE $table SET " . implode(', ', $set_parts) . " WHERE id IN ($ids_placeholders)",
