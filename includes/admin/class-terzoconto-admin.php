@@ -1796,11 +1796,38 @@ class TerzoConto_Admin {
 
 		$table = esc_sql($table);
 		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
+
+		$sql_set = '';
+
+		if (isset($fields['categoria_associazione_id'])) {
+			$sql_set .= 'categoria_associazione_id = %d, ';
+		}
+
+		if (isset($fields['conto_id'])) {
+			$sql_set .= 'conto_id = %d, ';
+		}
+
+		if (isset($fields['raccolta_fondi_id'])) {
+			$sql_set .= 'raccolta_fondi_id = %d, ';
+		}
+
+		if (isset($fields['anagrafica_id'])) {
+			$sql_set .= 'anagrafica_id = %d, ';
+		}
+
+		$sql_set .= 'updated_at = %s';
+
+		$sql = "
+			UPDATE {$table}
+			SET {$sql_set}
+			WHERE id IN ($ids_placeholders)
+		";
+
 		$updated = $wpdb->query(
-		    $wpdb->prepare(
-		        "UPDATE $table SET " . implode(', ', $set_parts) . " WHERE id IN ($ids_placeholders)",
-		        ...array_merge($set_values, $clean_ids)
-		    )
+			$wpdb->prepare(
+				$sql,
+				...array_merge($set_values, $clean_ids)
+			)
 		);
 
         // Trappola per errori MySQL
