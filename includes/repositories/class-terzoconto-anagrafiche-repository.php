@@ -16,16 +16,24 @@ class TerzoConto_Anagrafiche_Repository {
         global $wpdb;
 
         $now = current_time('mysql');
+        $tipo = $data['tipo'] ?? 'persona';
+        $nome = $data['nome'] ?? null;
+        $cognome = $data['cognome'] ?? null;
+        $ragione_sociale = $data['ragione_sociale'] ?? null;
+        $codice_fiscale = $data['codice_fiscale'] ?? null;
+        $email = $data['email'] ?? null;
+        $telefono = $data['telefono'] ?? null;
+
         $inserted = $wpdb->insert(
             $this->table,
             [
-                'tipo' => $data['tipo'] ?? 'persona',
-                'nome' => $data['nome'] ?? null,
-                'cognome' => $data['cognome'] ?? null,
-                'ragione_sociale' => $data['ragione_sociale'] ?? null,
-                'codice_fiscale' => $data['codice_fiscale'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefono' => $data['telefono'] ?? null,
+                'tipo' => $tipo,
+                'nome' => $nome,
+                'cognome' => $cognome,
+                'ragione_sociale' => $ragione_sociale,
+                'codice_fiscale' => $codice_fiscale,
+                'email' => $email,
+                'telefono' => $telefono,
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
@@ -42,16 +50,29 @@ class TerzoConto_Anagrafiche_Repository {
     public function update(int $id, array $data): bool {
         global $wpdb;
 
+        $id = absint($id);
+        if ($id <= 0) {
+            return false;
+        }
+
+        $tipo = $data['tipo'] ?? 'persona';
+        $nome = $data['nome'] ?? null;
+        $cognome = $data['cognome'] ?? null;
+        $ragione_sociale = $data['ragione_sociale'] ?? null;
+        $codice_fiscale = $data['codice_fiscale'] ?? null;
+        $email = $data['email'] ?? null;
+        $telefono = $data['telefono'] ?? null;
+
         return false !== $wpdb->update(
             $this->table,
             [
-                'tipo' => $data['tipo'] ?? 'persona',
-                'nome' => $data['nome'] ?? null,
-                'cognome' => $data['cognome'] ?? null,
-                'ragione_sociale' => $data['ragione_sociale'] ?? null,
-                'codice_fiscale' => $data['codice_fiscale'] ?? null,
-                'email' => $data['email'] ?? null,
-                'telefono' => $data['telefono'] ?? null,
+                'tipo' => $tipo,
+                'nome' => $nome,
+                'cognome' => $cognome,
+                'ragione_sociale' => $ragione_sociale,
+                'codice_fiscale' => $codice_fiscale,
+                'email' => $email,
+                'telefono' => $telefono,
                 'updated_at' => current_time('mysql'),
             ],
             ['id' => $id],
@@ -63,13 +84,26 @@ class TerzoConto_Anagrafiche_Repository {
     public function find_by_id(int $id): ?array {
         global $wpdb;
 
-        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$this->table} WHERE id = %d", $id), ARRAY_A);
+        $id = absint($id);
+        if ($id <= 0) {
+            return null;
+        }
+        $table = esc_sql($this->table);
+
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM $table WHERE id = %d",
+                $id
+            ),
+            ARRAY_A
+        );
 
         return is_array($row) ? $row : null;
     }
 
     public function find_by_cf(string $cf): ?array {
         global $wpdb;
+        $table = esc_sql($this->table);
 
         $normalized = strtoupper(trim($cf));
         if ($normalized === '') {
@@ -77,7 +111,10 @@ class TerzoConto_Anagrafiche_Repository {
         }
 
         $row = $wpdb->get_row(
-            $wpdb->prepare("SELECT * FROM {$this->table} WHERE UPPER(codice_fiscale) = %s LIMIT 1", $normalized),
+            $wpdb->prepare(
+                "SELECT * FROM $table WHERE UPPER(codice_fiscale) = %s LIMIT 1",
+                $normalized
+            ),
             ARRAY_A
         );
 
@@ -86,11 +123,12 @@ class TerzoConto_Anagrafiche_Repository {
 
     public function search(string $term): array {
         global $wpdb;
+        $table = esc_sql($this->table);
 
         $normalized = trim($term);
         if ($normalized === '') {
             return $wpdb->get_results(
-                $wpdb->prepare("SELECT * FROM {$this->table} ORDER BY cognome ASC, nome ASC, ragione_sociale ASC LIMIT %d", 100),
+                "SELECT * FROM $table ORDER BY cognome ASC, nome ASC, ragione_sociale ASC LIMIT 100",
                 ARRAY_A
             ) ?: [];
         }
@@ -100,7 +138,7 @@ class TerzoConto_Anagrafiche_Repository {
         return $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT *
-                FROM {$this->table}
+                FROM $table
                 WHERE nome LIKE %s
                     OR cognome LIKE %s
                     OR ragione_sociale LIKE %s

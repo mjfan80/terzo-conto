@@ -44,7 +44,15 @@ class TerzoConto_Admin {
 
     public function register_menu(): void {
         $cap = 'manage_options';
-        add_menu_page('TerzoConto', 'TerzoConto', $cap, 'terzoconto', [$this, 'render_movimenti'], 'dashicons-ledger', 30);
+        add_menu_page(
+            esc_html__('TerzoConto', 'terzo-conto'),
+            esc_html__('TerzoConto', 'terzo-conto'),
+            $cap,
+            'terzoconto',
+            [$this, 'render_movimenti'],
+            'dashicons-ledger',
+            30
+        );
         add_submenu_page('terzoconto', __('Movimenti', 'terzo-conto'), __('Movimenti', 'terzo-conto'), $cap, 'terzoconto', [$this, 'render_movimenti']);
         add_submenu_page('terzoconto', __('Categorie', 'terzo-conto'), __('Categorie', 'terzo-conto'), $cap, 'terzoconto-categorie', [$this, 'render_categorie']);
         add_submenu_page('terzoconto', __('Conti', 'terzo-conto'), __('Conti', 'terzo-conto'), $cap, 'terzoconto-conti', [$this, 'render_conti']);
@@ -54,6 +62,9 @@ class TerzoConto_Admin {
     }
 
     public function handle_post_actions(): void {
+        if (! current_user_can('manage_options')) {
+            return;
+        }
 		
         // Recuperiamo l'azione sia da POST che da GET (per far funzionare i link come "Annulla")
         $action = '';
@@ -419,6 +430,7 @@ class TerzoConto_Admin {
         $bulk_status = sanitize_text_field(wp_unslash($_GET['tc_bulk'] ?? ''));
         if ($bulk_status === 'done') {
             $count = absint(wp_unslash($_GET['updated'] ?? 0));
+			/* translators: %d = number of movements updated */										  
             echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count)) . '</p></div>';
         } elseif ($bulk_status === 'no_ids') {
             echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
@@ -432,7 +444,6 @@ class TerzoConto_Admin {
             wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
         }
 
-        $modello_d = $this->categorie->get_modello_d();
         $categorie = $this->categorie->get_associazione();
 
         echo '<div class="wrap"><h1>' . esc_html__('Categorie', 'terzo-conto') . '</h1>';
@@ -440,9 +451,9 @@ class TerzoConto_Admin {
 		wp_nonce_field('terzoconto_action_nonce');
 		echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
 		echo '<p><select name="provider">
-		<option value="generico">CSV generico</option>
-		<option value="paypal">CSV PayPal</option>
-		<option value="satispay">CSV Satispay</option>
+		<option value="generico">' . esc_html__('CSV generico', 'terzo-conto') . '</option>
+		<option value="paypal">' . esc_html__('CSV PayPal', 'terzo-conto') . '</option>
+		<option value="satispay">' . esc_html__('CSV Satispay', 'terzo-conto') . '</option>
 		</select></p>';
 		echo '<p><input type="file" name="csv_file" accept=".csv" required /></p>';
 		submit_button(__('Carica e anteprima', 'terzo-conto'));
@@ -667,6 +678,7 @@ class TerzoConto_Admin {
 			$duplicates = $preview['duplicates'];
 
 			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
+			/* translators: 1: number of valid rows, 2: total rows */												
 			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
@@ -695,27 +707,29 @@ class TerzoConto_Admin {
 
 				echo '<td>' . esc_html((string) ($i + 1)) . '</td>';
 
-				echo '<td><input type="date" name="rows['.$i.'][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
+				echo '<td><input type="date" name="rows[' . esc_attr($i) . '][data_movimento]" value="' . esc_attr($row['data_movimento']) . '"></td>';
 
-				echo '<td><input type="text" name="rows['.$i.'][importo]" value="' . esc_attr($row['importo']) . '"></td>';
+				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][importo]" value="' . esc_attr($row['importo']) . '"></td>';
 
 				echo '<td>
-					<select name="rows['.$i.'][tipo]">
+					<select name="rows[' . esc_attr($i) . '][tipo]">
 						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
 						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 					</select>
 				</td>';
 
-				echo '<td><input type="text" name="rows['.$i.'][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
+				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
-				echo '<td>' . $this->render_categoria_select_html(
-				    $categorie,
-				    'rows['.$i.'][categoria_id]',
-				    0,
-				    true
+				echo '<td>' . wp_kses_post(
+					$this->render_categoria_select_html(
+						$categorie,
+						'rows[' . esc_attr($i) . '][categoria_id]',
+						0,
+						true
+					)
 				) . '</td>';
 				
-				echo '<td><select name="rows['.$i.'][conto_id]" required>';
+				echo '<td><select name="rows['.  esc_attr($i) .'][conto_id]" required>';
 				echo '<option value="">' . esc_html__('-- conto --', 'terzo-conto') . '</option>';
 
 				foreach ($conti as $conto) {
@@ -811,11 +825,11 @@ class TerzoConto_Admin {
 
         // CONTROLLI (NON STAMPABILI)
         echo '<div class="tc-no-print" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">';
-        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> Stampa PDF</button></h1>';
+        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> ' . esc_html__('Stampa PDF', 'terzo-conto') . '</button></h1>';
         
         echo '<h2 class="nav-tab-wrapper">';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">Modello D (Rendiconto per Cassa)</a>';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">Report Raccolte Fondi</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">' . esc_html__('Modello D (Rendiconto per Cassa)', 'terzo-conto') . '</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">' . esc_html__('Report Raccolte Fondi', 'terzo-conto') . '</a>';
         echo '</h2>';
         echo '</div>'; // Fine area no-print
 
@@ -826,14 +840,17 @@ class TerzoConto_Admin {
             echo '<form method="get" style="display:inline-block; margin-right: 20px;">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="modello_d" />
-                    <strong>Anno di riferimento:</strong> <input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />
-                    ' . get_submit_button('Aggiorna', 'secondary', '', false) . '
-                  </form>';
+					<strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
+					<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
+			
+            echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false));
+			
+			echo '</form>';
             // Form esportazione backup (lo teniamo qui)
             echo '<form method="post" style="display:inline-block;">';
             wp_nonce_field('terzoconto_action_nonce');
             echo '<input type="hidden" name="terzoconto_action" value="export_movimenti_csv" />';
-            submit_button('Backup Movimenti CSV', 'secondary', '', false);
+            submit_button(__('Backup Movimenti CSV', 'terzo-conto'), 'secondary', '', false);
             echo '</form>';
             echo '</div>';
 
@@ -880,8 +897,8 @@ class TerzoConto_Admin {
                     if (isset($uscite[$i])) {
                         $u = $uscite[$i];
                         echo '<td>' . esc_html((string) $u['numero']) . ') ' . esc_html($u['nome']) . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($u['corrente'], 2, ',', '.') . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($u['precedente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $u['corrente'], 2, ',', '.')) . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $u['precedente'], 2, ',', '.')) . '</td>';
                         $tot_u_corr += $u['corrente']; $tot_u_prec += $u['precedente'];
                     } else {
                         echo '<td></td><td></td><td></td>';
@@ -891,8 +908,8 @@ class TerzoConto_Admin {
                     if (isset($entrate[$i])) {
                         $e = $entrate[$i];
                         echo '<td>' . esc_html((string) $e['numero']) . ') ' . esc_html($e['nome']) . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($e['corrente'], 2, ',', '.') . '</td>';
-                        echo '<td class="text-right">€ ' . number_format($e['precedente'], 2, ',', '.') . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $e['corrente'], 2, ',', '.')) . '</td>';
+                        echo '<td class="text-right">€ ' . esc_html(number_format((float) $e['precedente'], 2, ',', '.')) . '</td>';
                         $tot_e_corr += $e['corrente']; $tot_e_prec += $e['precedente'];
                     } else {
                         echo '<td></td><td></td><td></td>';
@@ -943,12 +960,12 @@ class TerzoConto_Admin {
             echo '<form method="get">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="raccolte" />
-                    <strong>Seleziona Raccolta:</strong> <select name="raccolta_id">';
+                    <strong>' . esc_html__('Seleziona Raccolta:', 'terzo-conto') . '</strong> <select name="raccolta_id">';
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-            echo '</select> ' . get_submit_button('Mostra Report', 'secondary', '', false) . '
-                  </form></div>';
+            echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false));
+            echo      '</form></div>';
 
             if ($raccolta_id > 0) {
                 $raccolta = $this->raccolte->find_by_id($raccolta_id);
@@ -960,7 +977,7 @@ class TerzoConto_Admin {
                 echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
                 echo '<br><h3>RENDICONTO DELLA SINGOLA RACCOLTA FONDI</h3>';
                 echo '<p><strong>' . esc_html($raccolta['nome']) . '</strong><br>';
-                echo 'Durata della raccolta: dal ' . esc_html(date('d/m/Y', strtotime($raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? date('d/m/Y', strtotime($raccolta['data_fine'])) : 'In corso') . '</p>';
+                echo 'Durata della raccolta: dal ' . esc_html(wp_date('d/m/Y', strtotime((string) $raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? wp_date('d/m/Y', strtotime((string) $raccolta['data_fine'])) : __('In corso', 'terzo-conto')) . '</p>';
                 echo '</div>';
 
                 echo '<div style="max-width: 600px; margin: 0 auto; font-family: sans-serif;">';
@@ -989,11 +1006,17 @@ class TerzoConto_Admin {
                 // Relazione Illustrativa
                 echo '<h4 style="margin-top: 40px;">RELAZIONE ILLUSTRATIVA</h4>';
                 echo '<div style="text-align: justify; line-height: 1.6;">';
-                echo wpautop(esc_html($raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'));
+				echo wp_kses_post(
+				    wpautop(
+				        esc_html(
+				            $raccolta['relazione_illustrativa'] ?: 'Nessuna relazione inserita per questa raccolta. Modifica la raccolta per aggiungere i dettagli narrativi.'
+				        )
+				    )
+				);
                 echo '</div>';
                 
                 echo '<div style="margin-top: 60px; text-align: right;">';
-                echo '<p>Data: ' . esc_html(date('d/m/Y')) . '</p>';
+                echo '<p>Data: ' . esc_html(wp_date('d/m/Y')) . '</p>';
                 echo '<p>Firma del Rappresentante Legale<br>___________________________</p>';
                 echo '</div>';
                 
@@ -1030,31 +1053,46 @@ class TerzoConto_Admin {
 		echo '<div class="terzoconto-movimento-grid">';
 
 		// DATA
-		echo '<p><label>Data movimento</label><br />
+		echo '<p><label>' . esc_html__('Data movimento', 'terzo-conto') . '</label><br />
 			<input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
 
 		// IMPORTO
-		echo '<p><label>Importo</label><br />
+		echo '<p><label>' . esc_html__('Importo', 'terzo-conto') . '</label><br />
 			<input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
 
 		// TIPO
 		$tipo = $movimento['tipo'] ?? 'entrata';
-		echo '<p><label>Tipo</label><br />
+		echo '<p><label>' . esc_html__('Tipo', 'terzo-conto') . '</label><br />
 			<select name="tipo">
-				<option value="entrata"' . selected($tipo, 'entrata', false) . '>Entrata</option>
-				<option value="uscita"' . selected($tipo, 'uscita', false) . '>Uscita</option>
+				<option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
+				<option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
 			</select></p>';
 
 		// CATEGORIA
 		$selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
-		echo '<p><label>Categoria</label><br />';
-		echo $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true);
+		echo '<p><label>' . esc_html__('Categoria', 'terzo-conto') . '</label><br />';
+		echo wp_kses(
+            $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true),
+            [
+                'select' => [
+                    'name' => true,
+                    'required' => true,
+                ],
+                'optgroup' => [
+                    'label' => true,
+                ],
+                'option' => [
+                    'value' => true,
+                    'selected' => true,
+                ],
+            ]
+        );
 		echo '</p>';
 
 		// CONTO
 		$selected_conto = (int) ($movimento['conto_id'] ?? 0);
-		echo '<p><label>Conto</label><br /><select name="conto_id" required>';
-		echo '<option value="0">Seleziona conto</option>';
+		echo '<p><label>' . esc_html__('Conto', 'terzo-conto') . '</label><br /><select name="conto_id" required>';
+		echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
 		foreach ($conti as $conto) {
 			echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
 				. esc_html($conto['nome']) .
@@ -1063,8 +1101,8 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// RACCOLTA (GIÀ CORRETTA)
-		echo '<p><label>Raccolta fondi</label><br /><select name="raccolta_fondi_id">';
-		echo '<option value="0">Nessuna raccolta</option>';
+		echo '<p><label>' . esc_html__('Raccolta fondi', 'terzo-conto') . '</label><br /><select name="raccolta_fondi_id">';
+		echo '<option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
 		$selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
 		foreach ($raccolte as $raccolta) {
 			echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
@@ -1074,7 +1112,7 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		//ANAGRAFICA (FIX VERO)
-		echo '<p><label>Anagrafica</label><br />';
+		echo '<p><label>' . esc_html__('Anagrafica', 'terzo-conto') . '</label><br />';
 		echo '<select name="anagrafica_id" id="terzoconto-anagrafica-select">';
 
 		echo '<option value="0"></option>'; // per allowClear
@@ -1092,19 +1130,19 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// DESCRIZIONE
-		echo '<p><label>Descrizione</label><br />
+		echo '<p><label>' . esc_html__('Descrizione', 'terzo-conto') . '</label><br />
 			<input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
 			
 		$stato_selezionato = $movimento['stato'] ?? 'attivo';
-		echo '<p><label>Stato del Movimento</label><br />
+		echo '<p><label>' . esc_html__('Stato del Movimento', 'terzo-conto') . '</label><br />
 			<select name="stato">
-				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>Attivo</option>
-				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>Annullato</option>
+				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>' . esc_html__('Attivo', 'terzo-conto') . '</option>
+				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>' . esc_html__('Annullato', 'terzo-conto') . '</option>
 			</select></p>';
 
 		echo '</div>';
 
-		submit_button($is_edit ? 'Aggiorna movimento' : 'Aggiungi movimento');
+		submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
 
 		echo '</form><hr />';
 	}
@@ -1133,7 +1171,7 @@ class TerzoConto_Admin {
 
 	    $html = '<select name="'.esc_attr($name).'" '.($required ? 'required' : '').'>';
 	
-	    $html .= '<option value="">-- categoria --</option>';
+	    $html .= '<option value="">' . esc_html__('-- categoria --', 'terzo-conto') . '</option>';
 	
 	    $grouped_categories = [];
 	
@@ -1326,8 +1364,8 @@ class TerzoConto_Admin {
             $data_movimento = sanitize_text_field(wp_unslash($row['data_movimento'] ?? ''));
             $importo = (float) str_replace(',', '.', (string) wp_unslash($row['importo'] ?? '0'));
             $tipo = sanitize_text_field(wp_unslash($row['tipo'] ?? ''));
-            $categoria_id = (int) ($row['categoria_id'] ?? 0);
-            $conto_id = (int) ($row['conto_id'] ?? 0);
+            $categoria_id = absint(wp_unslash($row['categoria_id'] ?? 0));
+            $conto_id = absint(wp_unslash($row['conto_id'] ?? 0));
             $descrizione = sanitize_text_field(wp_unslash($row['descrizione'] ?? ''));
 
             if (! $this->validator->is_valid_date($data_movimento)) {
@@ -1357,7 +1395,7 @@ class TerzoConto_Admin {
 		}
 
 		delete_transient($this->get_import_preview_transient_key());
-
+		/* translators: %d = number of imported movements */
 		add_settings_error('terzoconto', 'import_done', esc_html(sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported)), 'updated');
 	}
 
@@ -1730,25 +1768,78 @@ class TerzoConto_Admin {
         // Aggiungiamo la data di aggiornamento
         $fields['updated_at'] = current_time('mysql');
 
-        $set_parts = [];
-        $set_values = [];
-        foreach ($fields as $col => $val) {
-            if ($col === 'updated_at') {
-                $set_parts[] = "$col = %s";
-                $set_values[] = (string) $val;
-            } else {
-                $set_parts[] = "$col = %d";
-                $set_values[] = (int) $val;
-            }
-        }
+		$set_parts = [];
+		$set_values = [];
 
-        $ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
-        $sql = "UPDATE {$table} SET " . implode(', ', $set_parts) . " WHERE id IN ({$ids_placeholders})";
-        $sql = $wpdb->prepare($sql, array_merge($set_values, $clean_ids));
-        
-        // 5. Esecuzione della Query
-        $updated = $wpdb->query($sql);
+		if (isset($fields['categoria_associazione_id'])) {
+			$set_parts[] = 'categoria_associazione_id = %d';
+			$set_values[] = (int) $fields['categoria_associazione_id'];
+		}
 
+		if (isset($fields['conto_id'])) {
+			$set_parts[] = 'conto_id = %d';
+			$set_values[] = (int) $fields['conto_id'];
+		}
+
+		if (isset($fields['raccolta_fondi_id'])) {
+			$set_parts[] = 'raccolta_fondi_id = %d';
+			$set_values[] = (int) $fields['raccolta_fondi_id'];
+		}
+
+		if (isset($fields['anagrafica_id'])) {
+			$set_parts[] = 'anagrafica_id = %d';
+			$set_values[] = (int) $fields['anagrafica_id'];
+		}
+
+		$set_parts[] = 'updated_at = %s';
+		$set_values[] = (string) current_time('mysql');
+
+		$table = esc_sql($table);
+		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
+
+		$query = "UPDATE {$table} SET ";
+		$params = [];
+
+		if (isset($fields['categoria_associazione_id'])) {
+			$query .= 'categoria_associazione_id = %d, ';
+			$params[] = (int) $fields['categoria_associazione_id'];
+		}
+
+		if (isset($fields['conto_id'])) {
+			$query .= 'conto_id = %d, ';
+			$params[] = (int) $fields['conto_id'];
+		}
+
+		if (isset($fields['raccolta_fondi_id'])) {
+			$query .= 'raccolta_fondi_id = %d, ';
+			$params[] = (int) $fields['raccolta_fondi_id'];
+		}
+
+		if (isset($fields['anagrafica_id'])) {
+			$query .= 'anagrafica_id = %d, ';
+			$params[] = (int) $fields['anagrafica_id'];
+		}
+
+		$query .= 'updated_at = %s ';
+		$params[] = (string) current_time('mysql');
+
+		$query .= "WHERE id IN ($ids_placeholders)";
+
+		$params = array_merge($params, $clean_ids);
+		
+		
+		/*
+		 * phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+		 * phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter
+		 */
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				$query,
+				...$params
+			)
+		);
+		/* phpcs:enable */
+		
         // Trappola per errori MySQL
         if ($updated === false) {
             add_settings_error(
@@ -1777,13 +1868,13 @@ class TerzoConto_Admin {
 			</p>
 
 			<p>
-				<a href="https://github.com/sponsors/mjfan80" target="_blank" class="button button-primary">
+				<a href="<?php echo esc_url('https://github.com/sponsors/mjfan80'); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary">
 					<?php echo esc_html__('❤️ GitHub Sponsors', 'terzo-conto'); ?>
 				</a>
 			</p>
 
 			<p>
-				<a href="https://www.buymeacoffee.com/gabrieleprandini" target="_blank" class="button">
+				<a href="<?php echo esc_url('https://www.buymeacoffee.com/gabrieleprandini'); ?>" target="_blank" rel="noopener noreferrer" class="button">
 					<?php echo esc_html__('☕ Offrimi un caffè', 'terzo-conto'); ?>
 				</a>
 			</p>

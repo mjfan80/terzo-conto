@@ -99,16 +99,35 @@ class TerzoConto_Installer {
                 }
 
                 if (! self::column_exists($table, 'updated_at')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at");
+                   $table = esc_sql($table);
+
+                    $result = $wpdb->query(
+                        "ALTER TABLE {$table} ADD COLUMN updated_at DATETIME NOT NULL AFTER created_at"
+                    );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add column updated_at to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add column updated_at to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
 
                 if (! self::index_exists($table, 'anno_progressivo')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX anno_progressivo (anno, progressivo_annuale)");
+                    $table = esc_sql($table);
+                    $result = $wpdb->query(
+                        "ALTER TABLE {$table} ADD INDEX anno_progressivo (anno, progressivo_annuale)"
+                    );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add index anno_progressivo to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add index anno_progressivo to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
             },
@@ -123,16 +142,32 @@ class TerzoConto_Installer {
                 }
 
                 if (! self::column_exists($table, 'codice_fiscale')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo");
+                    $table = esc_sql($table); 
+                    $result = $wpdb->query( "ALTER TABLE {$table} ADD COLUMN codice_fiscale VARCHAR(16) NULL AFTER tipo" );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add column codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add column codice_fiscale to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
 
                 if (! self::index_exists($table, 'codice_fiscale')) {
-                    $result = $wpdb->query("ALTER TABLE {$table} ADD INDEX codice_fiscale (codice_fiscale)");
+                    $table = esc_sql($table);
+                    $result = $wpdb->query(
+                        "ALTER TABLE {$table} ADD INDEX codice_fiscale (codice_fiscale)"
+                    );
                     if ($result === false) {
-                        throw new RuntimeException(sprintf('Unable to add index codice_fiscale to %s: %s', $table, $wpdb->last_error));
+                        throw new RuntimeException(
+                            sprintf(
+                                'Unable to add index codice_fiscale to %s: %s',
+                                esc_html($table),
+                                esc_html($wpdb->last_error)
+                            )
+                        );
                     }
                 }
             },
@@ -169,10 +204,11 @@ class TerzoConto_Installer {
 
     private static function table_exists(string $table_name): bool {
         global $wpdb;
-
-        $sql = $wpdb->prepare('SHOW TABLES LIKE %s', $table_name);
-        $found = $wpdb->get_var($sql);
-
+    
+        $found = $wpdb->get_var(
+            $wpdb->prepare('SHOW TABLES LIKE %s', $table_name)
+        );
+    
         return $found === $table_name;
     }
 
@@ -207,8 +243,14 @@ class TerzoConto_Installer {
             return false;
         }
 
-        $sql = $wpdb->prepare("SHOW COLUMNS FROM {$table_name} LIKE %s", $column_name);
-        $result = $wpdb->get_var($sql);
+       $table_name = esc_sql($table_name);
+
+        $result = $wpdb->get_var(
+            $wpdb->prepare(
+                "SHOW COLUMNS FROM `$table_name` LIKE %s",
+                $column_name
+            )
+        );
 
         return $result === $column_name;
     }
@@ -220,8 +262,12 @@ class TerzoConto_Installer {
             return false;
         }
 
-        $sql = $wpdb->prepare("SHOW INDEX FROM {$table_name} WHERE Key_name = %s", $index_name);
-        $result = $wpdb->get_var($sql);
+        $table_name = esc_sql($table_name);
+        $result = $wpdb->get_var(
+             $wpdb->prepare(
+                "SHOW INDEX FROM `$table_name` WHERE Key_name = %s",
+            $index_name)
+        );
 
         return $result === $index_name;
     }
@@ -374,7 +420,9 @@ class TerzoConto_Installer {
     private static function seed_defaults(): void {
         global $wpdb;
 
-        $prefix = $wpdb->prefix;
+        $categorie_modello_d_table = $wpdb->prefix . 'terzoconto_categorie_modello_d';
+        $categorie_associazione_table = $wpdb->prefix . 'terzoconto_categorie_associazione';
+        $conti_table = $wpdb->prefix . 'terzoconto_conti';
 
         $model_d = [
             ['A', 1, 'U', __('Materie prime, sussidiarie, di consumo e di merci', 'terzo-conto')],
@@ -432,7 +480,7 @@ class TerzoConto_Installer {
             $codice = $item[0] . (string) $item[1];
             $wpdb->query(
                 $wpdb->prepare(
-                    "INSERT IGNORE INTO {$prefix}terzoconto_categorie_modello_d (area, numero, tipo, codice, nome, ordinamento) VALUES (%s, %d, %s, %s, %s, %d)",
+                    "INSERT IGNORE INTO {$categorie_modello_d_table} (area, numero, tipo, codice, nome, ordinamento) VALUES (%s, %d, %s, %s, %s, %d)",
                     $item[0],
                     $item[1],
                     $item[2],
@@ -444,18 +492,18 @@ class TerzoConto_Installer {
         }
 
         $categorie_assoc_count = (int) $wpdb->get_var(
-            $wpdb->prepare("SELECT COUNT(*) FROM {$prefix}terzoconto_categorie_associazione WHERE %d = %d", 1, 1)
+            "SELECT COUNT(*) FROM {$categorie_associazione_table}"
         );
 
         if ($categorie_assoc_count === 0) {
             $model_d_rows = $wpdb->get_results(
-                $wpdb->prepare("SELECT id, nome FROM {$prefix}terzoconto_categorie_modello_d WHERE %d = %d ORDER BY ordinamento ASC", 1, 1),
+                "SELECT id, nome FROM {$categorie_modello_d_table} ORDER BY ordinamento ASC",
                 ARRAY_A
             ) ?: [];
 
             foreach ($model_d_rows as $row) {
                 $wpdb->insert(
-                    "{$prefix}terzoconto_categorie_associazione",
+                    $categorie_associazione_table,
                     [
                         'nome' => $row['nome'],
                         'modello_d_id' => (int) $row['id'],
@@ -470,10 +518,15 @@ class TerzoConto_Installer {
         $accounts = ['Cassa', 'Conto corrente', 'PayPal', 'Satispay'];
 
         foreach ($accounts as $account) {
-            $exists = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$prefix}terzoconto_conti WHERE nome = %s", $account));
+            $exists = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT id FROM {$conti_table} WHERE nome = %s",
+                    $account
+                )
+            );
 
             if (! $exists) {
-                $wpdb->insert("{$prefix}terzoconto_conti", ['nome' => $account, 'attivo' => 1], ['%s', '%d']);
+                $wpdb->insert($conti_table, ['nome' => $account, 'attivo' => 1], ['%s', '%d']);
             }
         }
     }

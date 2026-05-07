@@ -12,13 +12,15 @@ class TerzoConto_Report_Service {
     public function get_dati_modello_d(int $year): array {
         global $wpdb;
 
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
-        $cat_mod = $wpdb->prefix . 'terzoconto_categorie_modello_d';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+        $cat_mod = esc_sql($wpdb->prefix . 'terzoconto_categorie_modello_d');
 
         // Prendiamo TUTTE le voci del Modello D ufficiale (devono esserci tutte anche se a zero)
+        $table = esc_sql($cat_mod);
+        
         $voci = $wpdb->get_results(
-            $wpdb->prepare("SELECT * FROM {$cat_mod} WHERE %d = %d ORDER BY area ASC, tipo DESC, numero ASC", 1, 1),
+            "SELECT * FROM {$table} ORDER BY area ASC, tipo DESC, numero ASC",
             ARRAY_A
         );
 
@@ -53,18 +55,22 @@ class TerzoConto_Report_Service {
 
     private function get_somme_per_anno(int $year): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
-
-        $sql = $wpdb->prepare("
-            SELECT ca.modello_d_id, SUM(m.importo) as totale
-            FROM {$mov} m
-            JOIN {$cat_assoc} ca ON m.categoria_associazione_id = ca.id
-            WHERE m.anno = %d AND m.stato = 'attivo'
-            GROUP BY ca.modello_d_id
-        ", $year);
-
-        $results = $wpdb->get_results($sql, ARRAY_A);
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+      
+        $results = $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT ca.modello_d_id, SUM(m.importo) as totale
+                FROM {$mov} m
+                JOIN {$cat_assoc} ca ON m.categoria_associazione_id = ca.id
+                WHERE m.anno = %d AND m.stato = 'attivo'
+                GROUP BY ca.modello_d_id
+                ",
+                $year
+            ),
+            ARRAY_A
+        );
         $somme = [];
         if ($results) {
             foreach ($results as $row) {
@@ -79,22 +85,26 @@ class TerzoConto_Report_Service {
      */
     public function get_saldi_conti(int $year): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $conti = $wpdb->prefix . 'terzoconto_conti';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $conti = esc_sql($wpdb->prefix . 'terzoconto_conti');
 
         // Somma Entrate - Somma Uscite fino al 31/12 dell'anno
-        $sql = $wpdb->prepare("
-            SELECT c.nome, 
-                   SUM(CASE WHEN m.tipo = 'entrata' THEN m.importo ELSE 0 END) - 
-                   SUM(CASE WHEN m.tipo = 'uscita' THEN m.importo ELSE 0 END) as saldo
-            FROM {$mov} m
-            JOIN {$conti} c ON m.conto_id = c.id
-            WHERE m.anno <= %d AND m.stato = 'attivo'
-            GROUP BY c.id
-            ORDER BY c.nome ASC
-        ", $year);
-
-        return $wpdb->get_results($sql, ARRAY_A) ?: [];
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "
+                SELECT c.nome, 
+                       SUM(CASE WHEN m.tipo = 'entrata' THEN m.importo ELSE 0 END) - 
+                       SUM(CASE WHEN m.tipo = 'uscita' THEN m.importo ELSE 0 END) as saldo
+                FROM {$mov} m
+                JOIN {$conti} c ON m.conto_id = c.id
+                WHERE m.anno <= %d AND m.stato = 'attivo'
+                GROUP BY c.id
+                ORDER BY c.nome ASC
+                ",
+                $year
+            ),
+            ARRAY_A
+        ) ?: [];
     }
 
     /**
@@ -102,8 +112,8 @@ class TerzoConto_Report_Service {
      */
     public function get_dati_raccolta(int $raccolta_id): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
 
         // Entrate
         $entrate = $wpdb->get_results($wpdb->prepare("
@@ -134,6 +144,7 @@ class TerzoConto_Report_Service {
     }
 
     public function export_csv_movimenti(array $movimenti): string {
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
         $fh = fopen('php://temp', 'r+');
         fputcsv($fh, ['id', 'data_movimento', 'importo', 'tipo', 'descrizione', 'stato']);
         foreach ($movimenti as $row) {

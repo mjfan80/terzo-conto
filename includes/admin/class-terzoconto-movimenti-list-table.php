@@ -30,7 +30,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 			'id' => esc_html__('ID', 'terzo-conto'),
 			'stato' => esc_html__('Stato', 'terzo-conto'), 
 			'data_movimento' => esc_html__('Data', 'terzo-conto'),
-			'progressivo_annuale' => '#',
+			'progressivo_annuale' => esc_html__('#', 'terzo-conto'),
 			'tipo' => esc_html__('Tipo', 'terzo-conto'),
 			'importo' => esc_html__('Importo', 'terzo-conto'),
 			'conto' => esc_html__('Conto', 'terzo-conto'),
@@ -59,7 +59,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 	protected function column_cb($item) {
 		return sprintf(
 			'<input type="checkbox" name="movimento_ids[]" value="%d" />',
-			$item['id']
+			absint($item['id'] ?? 0)
 		);
 	}
 	
@@ -85,7 +85,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         $edit_url = add_query_arg(
             [
                 'page' => 'terzoconto',
-                'edit_movimento_id' => $item['id'],
+                'edit_movimento_id' => absint($item['id'] ?? 0),
             ],
             admin_url('admin.php')
         );
@@ -97,7 +97,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         );
 
 		// 2. ANNULLA (Visibile solo se il movimento è attivo)
-		if ($item['stato'] !== 'annullato') {
+		if (($item['stato'] ?? '') !== 'annullato') {
 			$actions['annulla'] = sprintf(
 				'<a href="%s" class="submitdelete" onclick="return confirm(\'%s\')">%s</a>',
 				esc_url(
@@ -105,7 +105,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 						add_query_arg([
 							'page' => 'terzoconto',
 							'terzoconto_action' => 'annulla_movimento',
-							'id' => $item['id'],
+							'id' => absint($item['id'] ?? 0),
 						], admin_url('admin.php')),
 						'terzoconto_action_nonce'
 					)
@@ -117,27 +117,33 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 
 		return sprintf(
 			'%1$s %2$s',
-			esc_html((string) $item['id']),
+			esc_html((string) absint($item['id'] ?? 0)),
 			$this->row_actions($actions)
 		);
 	}
 	
 	protected function column_stato($item) {
-        if ($item['stato'] === 'annullato') {
-            return '<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Annullato', 'terzo-conto') . '</span>';
+        $allowed_status_html = [
+            'span' => [
+                'style' => true,
+            ],
+        ];
+
+        if (($item['stato'] ?? '') === 'annullato') {
+            return wp_kses('<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Annullato', 'terzo-conto') . '</span>', $allowed_status_html);
         }
-        return '<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Attivo', 'terzo-conto') . '</span>';
+        return wp_kses('<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Attivo', 'terzo-conto') . '</span>', $allowed_status_html);
     }
 
     public function prepare_items(): void {
 		global $wpdb;
 
-		$movimenti_table   = $wpdb->prefix . 'terzoconto_movimenti';
-		$conti_table       = $wpdb->prefix . 'terzoconto_conti';
-		$categorie_assoc   = $wpdb->prefix . 'terzoconto_categorie_associazione';
-		$categorie_modeld  = $wpdb->prefix . 'terzoconto_categorie_modello_d';
-		$raccolte_table    = $wpdb->prefix . 'terzoconto_raccolte_fondi';
-		$anagrafiche_table = $wpdb->prefix . 'terzoconto_anagrafiche';
+		$movimenti_table   = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+		$conti_table       = esc_sql($wpdb->prefix . 'terzoconto_conti');
+		$categorie_assoc   = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+		$categorie_modeld  = esc_sql($wpdb->prefix . 'terzoconto_categorie_modello_d');
+		$raccolte_table    = esc_sql($wpdb->prefix . 'terzoconto_raccolte_fondi');
+		$anagrafiche_table = esc_sql($wpdb->prefix . 'terzoconto_anagrafiche');
 
         // --- GESTIONE ORDINAMENTO (SORTING) ---
         // Mappiamo le colonne della tabella con i veri campi del database
@@ -155,37 +161,55 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         ];
 
         // Leggiamo i parametri dall'URL, con fallback predefinito su data_movimento
-        $orderby_key = sanitize_text_field(wp_unslash($_GET['orderby'] ?? 'data_movimento'));
-        $orderby     = $allowed_orderby[$orderby_key] ?? 'm.data_movimento';
+        $orderby_key = 'data_movimento';
+        if (isset($_GET['orderby'])) {
+            $orderby_key = sanitize_key(wp_unslash($_GET['orderby']));
+        }
+        // Safe: value is selected only from the static $allowed_orderby whitelist above.
+        $orderby = $allowed_orderby[$orderby_key] ?? 'm.data_movimento';
 
-        $order_key   = strtoupper(sanitize_text_field(wp_unslash($_GET['order'] ?? 'DESC')));
-        $order       = in_array($order_key, ['ASC', 'DESC'], true) ? $order_key : 'DESC';
+        $order_key = 'DESC';
+        if (isset($_GET['order'])) {
+            $order_key = strtoupper(sanitize_text_field(wp_unslash($_GET['order'])));
+        }
+        // Safe: value is constrained to ASC/DESC only.
+        $order = in_array($order_key, ['ASC', 'DESC'], true) ? $order_key : 'DESC';
 
         // Ordinamento secondario di sicurezza (se due date sono uguali, ordina per ID)
+        // Safe: composed from allowlisted $orderby and constrained $order values.
         $fallback_order = ($orderby === 'm.data_movimento') ? ", m.id $order" : ", m.data_movimento DESC";
 
 		// 🔥 QUERY UNICA CON ORDINAMENTO DINAMICO
-		$sql = $wpdb->prepare("
-			SELECT 
-				m.*,
-				c.nome AS conto_nome,
-				md.tipo AS modello_tipo,
-				md.codice AS modello_codice,
-				r.nome AS raccolta_nome,
-				a.nome AS anagrafica_nome,
-				a.cognome AS anagrafica_cognome,
-				a.ragione_sociale AS anagrafica_rs,
-				a.tipo AS anagrafica_tipo
-			FROM $movimenti_table m
-			LEFT JOIN $conti_table c ON c.id = m.conto_id
-			LEFT JOIN $categorie_assoc ca ON ca.id = m.categoria_associazione_id
-			LEFT JOIN $categorie_modeld md ON md.id = ca.modello_d_id
-			LEFT JOIN $raccolte_table r ON r.id = m.raccolta_fondi_id
-			LEFT JOIN $anagrafiche_table a ON a.id = m.anagrafica_id
-			WHERE m.id >= %d
-			ORDER BY $orderby $order $fallback_order
-		", 0);
-		$results = $wpdb->get_results($sql, ARRAY_A) ?: [];
+		$orderby_sql  = esc_sql($orderby);
+		$order_sql    = esc_sql($order);
+		$fallback_sql = esc_sql($fallback_order);
+		
+		$results = $wpdb->get_results(
+		    $wpdb->prepare(
+		        "
+		        SELECT 
+		            m.*,
+		            c.nome AS conto_nome,
+		            md.tipo AS modello_tipo,
+		            md.codice AS modello_codice,
+		            r.nome AS raccolta_nome,
+		            a.nome AS anagrafica_nome,
+		            a.cognome AS anagrafica_cognome,
+		            a.ragione_sociale AS anagrafica_rs,
+		            a.tipo AS anagrafica_tipo
+		        FROM {$movimenti_table} m
+		        LEFT JOIN {$conti_table} c ON c.id = m.conto_id
+		        LEFT JOIN {$categorie_assoc} ca ON ca.id = m.categoria_associazione_id
+		        LEFT JOIN {$categorie_modeld} md ON md.id = ca.modello_d_id
+		        LEFT JOIN {$raccolte_table} r ON r.id = m.raccolta_fondi_id
+		        LEFT JOIN {$anagrafiche_table} a ON a.id = m.anagrafica_id
+		        WHERE m.id >= %d
+		        ORDER BY $orderby_sql $order_sql $fallback_sql
+		        ",
+		        0
+		    ),
+		    ARRAY_A
+		) ?: [];
 
 		// 🔧 normalizzazione dati per la tabella
 		foreach ($results as &$item) {

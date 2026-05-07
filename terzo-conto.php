@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: TerzoConto – Rendiconto ETS per WordPress
+ * Plugin Name: TerzoConto – Rendiconto ETS
  * Description: Registro di cassa semplificato per ETS con report automatici.
  * Version: 1.0.0
  * Requires at least: 6.0
