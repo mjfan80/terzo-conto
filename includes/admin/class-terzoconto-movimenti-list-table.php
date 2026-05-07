@@ -138,12 +138,12 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
     public function prepare_items(): void {
 		global $wpdb;
 
-		$movimenti_table   = $wpdb->prefix . 'terzoconto_movimenti';
-		$conti_table       = $wpdb->prefix . 'terzoconto_conti';
-		$categorie_assoc   = $wpdb->prefix . 'terzoconto_categorie_associazione';
-		$categorie_modeld  = $wpdb->prefix . 'terzoconto_categorie_modello_d';
-		$raccolte_table    = $wpdb->prefix . 'terzoconto_raccolte_fondi';
-		$anagrafiche_table = $wpdb->prefix . 'terzoconto_anagrafiche';
+		$movimenti_table   = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+		$conti_table       = esc_sql($wpdb->prefix . 'terzoconto_conti');
+		$categorie_assoc   = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+		$categorie_modeld  = esc_sql($wpdb->prefix . 'terzoconto_categorie_modello_d');
+		$raccolte_table    = esc_sql($wpdb->prefix . 'terzoconto_raccolte_fondi');
+		$anagrafiche_table = esc_sql($wpdb->prefix . 'terzoconto_anagrafiche');
 
         // --- GESTIONE ORDINAMENTO (SORTING) ---
         // Mappiamo le colonne della tabella con i veri campi del database
