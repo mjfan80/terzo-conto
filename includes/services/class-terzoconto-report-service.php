@@ -62,8 +62,8 @@ class TerzoConto_Report_Service {
             $wpdb->prepare(
                 "
                 SELECT ca.modello_d_id, SUM(m.importo) as totale
-                FROM {$mov_table} m
-                JOIN {$cat_assoc_table} ca ON m.categoria_associazione_id = ca.id
+                FROM {$mov} m
+                JOIN {$cat_assoc} ca ON m.categoria_associazione_id = ca.id
                 WHERE m.anno = %d AND m.stato = 'attivo'
                 GROUP BY ca.modello_d_id
                 ",
