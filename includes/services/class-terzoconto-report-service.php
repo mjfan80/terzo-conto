@@ -12,9 +12,9 @@ class TerzoConto_Report_Service {
     public function get_dati_modello_d(int $year): array {
         global $wpdb;
 
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
-        $cat_mod = $wpdb->prefix . 'terzoconto_categorie_modello_d';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+        $cat_mod = esc_sql($wpdb->prefix . 'terzoconto_categorie_modello_d');
 
         // Prendiamo TUTTE le voci del Modello D ufficiale (devono esserci tutte anche se a zero)
         $table = esc_sql($cat_mod);
@@ -55,12 +55,9 @@ class TerzoConto_Report_Service {
 
     private function get_somme_per_anno(int $year): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
-
-        $mov_table = esc_sql($mov);
-        $cat_assoc_table = esc_sql($cat_assoc);
-        
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
+      
         $results = $wpdb->get_results(
             $wpdb->prepare(
                 "
@@ -88,8 +85,8 @@ class TerzoConto_Report_Service {
      */
     public function get_saldi_conti(int $year): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $conti = $wpdb->prefix . 'terzoconto_conti';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $conti = esc_sql($wpdb->prefix . 'terzoconto_conti');
 
         // Somma Entrate - Somma Uscite fino al 31/12 dell'anno
         return $wpdb->get_results(
@@ -115,8 +112,8 @@ class TerzoConto_Report_Service {
      */
     public function get_dati_raccolta(int $raccolta_id): array {
         global $wpdb;
-        $mov = $wpdb->prefix . 'terzoconto_movimenti';
-        $cat_assoc = $wpdb->prefix . 'terzoconto_categorie_associazione';
+        $mov = esc_sql($wpdb->prefix . 'terzoconto_movimenti');
+        $cat_assoc = esc_sql($wpdb->prefix . 'terzoconto_categorie_associazione');
 
         // Entrate
         $entrate = $wpdb->get_results($wpdb->prepare("
