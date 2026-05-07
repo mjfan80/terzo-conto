@@ -1797,39 +1797,49 @@ class TerzoConto_Admin {
 		$table = esc_sql($table);
 		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
 
-		$sql_set = '';
+		$query = "UPDATE {$table} SET ";
+		$params = [];
 
 		if (isset($fields['categoria_associazione_id'])) {
-			$sql_set .= 'categoria_associazione_id = %d, ';
+			$query .= 'categoria_associazione_id = %d, ';
+			$params[] = (int) $fields['categoria_associazione_id'];
 		}
 
 		if (isset($fields['conto_id'])) {
-			$sql_set .= 'conto_id = %d, ';
+			$query .= 'conto_id = %d, ';
+			$params[] = (int) $fields['conto_id'];
 		}
 
 		if (isset($fields['raccolta_fondi_id'])) {
-			$sql_set .= 'raccolta_fondi_id = %d, ';
+			$query .= 'raccolta_fondi_id = %d, ';
+			$params[] = (int) $fields['raccolta_fondi_id'];
 		}
 
 		if (isset($fields['anagrafica_id'])) {
-			$sql_set .= 'anagrafica_id = %d, ';
+			$query .= 'anagrafica_id = %d, ';
+			$params[] = (int) $fields['anagrafica_id'];
 		}
 
-		$sql_set .= 'updated_at = %s';
+		$query .= 'updated_at = %s ';
+		$params[] = (string) current_time('mysql');
 
-		$sql = "
-			UPDATE {$table}
-			SET {$sql_set}
-			WHERE id IN ($ids_placeholders)
-		";
+		$query .= "WHERE id IN ($ids_placeholders)";
 
+		$params = array_merge($params, $clean_ids);
+		
+		
+		/*
+		 * phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+		 * phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter
+		 */
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				$sql,
-				...array_merge($set_values, $clean_ids)
+				$query,
+				...$params
 			)
 		);
-
+		/* phpcs:enable */
+		
         // Trappola per errori MySQL
         if ($updated === false) {
             add_settings_error(
