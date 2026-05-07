@@ -1768,37 +1768,31 @@ class TerzoConto_Admin {
         // Aggiungiamo la data di aggiornamento
         $fields['updated_at'] = current_time('mysql');
 
-       $set_parts = [];
+		$set_parts = [];
 		$set_values = [];
-		
-		$allowed_fields = [
-		    'categoria_associazione_id',
-		    'conto_id',
-		    'raccolta_fondi_id',
-		    'anagrafica_id',
-		    'updated_at',
-		];
-		
-		foreach ($fields as $col => $val) {
-		    if (! in_array($col, $allowed_fields, true)) {
-		        continue;
-		    }
-		
-		    switch ($col) {
-		        case 'updated_at':
-		            $set_parts[] = '`updated_at` = %s';
-		            $set_values[] = (string) $val;
-		            break;
-		
-		        case 'categoria_associazione_id':
-		        case 'conto_id':
-		        case 'raccolta_fondi_id':
-		        case 'anagrafica_id':
-		            $set_parts[] = "`{$col}` = %d";
-		            $set_values[] = (int) $val;
-		            break;
-		    }
+
+		if (isset($fields['categoria_associazione_id'])) {
+			$set_parts[] = 'categoria_associazione_id = %d';
+			$set_values[] = (int) $fields['categoria_associazione_id'];
 		}
+
+		if (isset($fields['conto_id'])) {
+			$set_parts[] = 'conto_id = %d';
+			$set_values[] = (int) $fields['conto_id'];
+		}
+
+		if (isset($fields['raccolta_fondi_id'])) {
+			$set_parts[] = 'raccolta_fondi_id = %d';
+			$set_values[] = (int) $fields['raccolta_fondi_id'];
+		}
+
+		if (isset($fields['anagrafica_id'])) {
+			$set_parts[] = 'anagrafica_id = %d';
+			$set_values[] = (int) $fields['anagrafica_id'];
+		}
+
+		$set_parts[] = 'updated_at = %s';
+		$set_values[] = (string) current_time('mysql');
 
 		$table = esc_sql($table);
 		$ids_placeholders = implode(',', array_fill(0, count($clean_ids), '%d'));
