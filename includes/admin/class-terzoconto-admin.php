@@ -277,6 +277,13 @@ class TerzoConto_Admin {
 			$select2_version
 		);
 
+		wp_enqueue_style(
+			'terzoconto-admin',
+			TERZOCONTO_PLUGIN_URL . 'assets/css/admin.css',
+			[],
+			TERZOCONTO_VERSION
+		);
+
 		wp_enqueue_script(
 			'select2',
 			$select2_base_url . 'select2.min.js',
@@ -499,41 +506,6 @@ class TerzoConto_Admin {
         $raccolte = $this->raccolte->get_all();
 
         echo '<div class="wrap"><h1>' . esc_html__('Raccolte fondi', 'terzoconto-rendiconto-ets') . '</h1>';
-        echo '<style>
-            .terzoconto-raccolte-form-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-                gap: 12px;
-                max-width: 1000px;
-                margin-bottom: 12px;
-            }
-            .terzoconto-raccolte-form-grid input[type="text"],
-            .terzoconto-raccolte-form-grid input[type="date"],
-            .terzoconto-raccolte-form-grid select,
-            .terzoconto-raccolte-form-grid textarea {
-                width: 100%;
-            }
-            .terzoconto-raccolte-help {
-                max-width: 980px;
-                margin: 8px 0 14px;
-            }
-            .terzoconto-raccolte-status-badge {
-                display: inline-block;
-                padding: 2px 10px;
-                border-radius: 999px;
-                font-size: 12px;
-                font-weight: 600;
-                line-height: 1.8;
-            }
-            .terzoconto-raccolte-status-badge.is-open {
-                background: #e6f6eb;
-                color: #176a32;
-            }
-            .terzoconto-raccolte-status-badge.is-closed {
-                background: #f0f0f1;
-                color: #50575e;
-            }
-        </style>';
         $this->render_raccolte_notice();
         settings_errors('terzoconto_raccolte');
 
@@ -798,31 +770,6 @@ class TerzoConto_Admin {
 
         echo '<div class="wrap tc-report-wrap">';
         
-        // CSS per formattare a video e per la STAMPA (nasconde i menu di WP)
-        echo '
-        <style>
-            .tc-report-wrap { background: #fff; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); max-width: 1000px; margin-top: 20px; }
-            .tc-print-btn { float: right; }
-            .tc-report-header { text-align: center; margin-bottom: 30px; font-family: serif; }
-            .tc-report-header h2, .tc-report-header h3 { margin: 5px 0; }
-            
-            /* Tabella Modello D */
-            .tc-modello-d { width: 100%; border-collapse: collapse; font-size: 12px; }
-            .tc-modello-d th, .tc-modello-d td { border: 1px solid #000; padding: 4px; vertical-align: top; }
-            .tc-modello-d th { background: #f0f0f0; text-align: center; }
-            .tc-modello-d .section-title { background: #e0e0e0; font-weight: bold; text-align: center; }
-            .tc-modello-d .text-right { text-align: right; }
-            .tc-modello-d .totale-row { font-weight: bold; background: #f9f9f9; }
-            
-            /* Stampa PDF */
-            @media print {
-                #adminmenuwrap, #adminmenuback, #wpadminbar, .tc-no-print, .notice, #footer-upgrade { display: none !important; }
-                #wpcontent { margin-left: 0 !important; padding: 0 !important; }
-                .tc-report-wrap { box-shadow: none; max-width: 100%; padding: 0; }
-                @page { margin: 1cm; size: A4; }
-            }
-        </style>';
-
         // CONTROLLI (NON STAMPABILI)
         echo '<div class="tc-no-print" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">';
         echo '<h1>' . esc_html__('Report e Stampe', 'terzoconto-rendiconto-ets') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> ' . esc_html__('Stampa PDF', 'terzoconto-rendiconto-ets') . '</button></h1>';

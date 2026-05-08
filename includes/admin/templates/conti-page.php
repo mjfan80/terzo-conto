@@ -17,14 +17,6 @@ $conto_attivo = absint($conto['attivo'] ?? 1);
 ?>
 <div class="wrap">
     <h1><?php echo esc_html__('Conti', 'terzoconto-rendiconto-ets'); ?></h1>
-    <style>
-        .terzoconto-conti-form-row{display:flex;flex-wrap:wrap;gap:12px;max-width:980px;align-items:flex-end;margin-bottom:8px}
-        .terzoconto-conti-form-row p{margin:0;flex:1 1 280px}
-        .terzoconto-conti-form-row input[type="text"]{width:100%}
-        .terzoconto-conti-check-row{display:flex;flex-wrap:wrap;gap:16px;margin:8px 0 0}
-        .terzoconto-conti-help{max-width:980px;margin:8px 0 14px}
-        .terzoconto-conti-status-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.8;background:#e6f6eb;color:#176a32}
-    </style>
 
     <?php $admin->render_conti_notice(); ?>
     <?php settings_errors('terzoconto_conti'); ?>
