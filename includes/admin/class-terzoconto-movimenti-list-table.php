@@ -27,17 +27,17 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 	public function get_columns(): array {
 		return [
 			'cb' => '<input type="checkbox" />',
-			'id' => esc_html__('ID', 'terzo-conto'),
-			'stato' => esc_html__('Stato', 'terzo-conto'), 
-			'data_movimento' => esc_html__('Data', 'terzo-conto'),
-			'progressivo_annuale' => esc_html__('#', 'terzo-conto'),
-			'tipo' => esc_html__('Tipo', 'terzo-conto'),
-			'importo' => esc_html__('Importo', 'terzo-conto'),
-			'conto' => esc_html__('Conto', 'terzo-conto'),
-			'categoria' => esc_html__('Categoria', 'terzo-conto'),
-			'raccolta' => esc_html__('Raccolta', 'terzo-conto'),
-			'anagrafica' => esc_html__('Anagrafica', 'terzo-conto'),
-			'descrizione' => esc_html__('Descrizione', 'terzo-conto'),
+			'id' => esc_html__('ID', 'terzoconto-rendiconto-ets'),
+			'stato' => esc_html__('Stato', 'terzoconto-rendiconto-ets'), 
+			'data_movimento' => esc_html__('Data', 'terzoconto-rendiconto-ets'),
+			'progressivo_annuale' => esc_html__('#', 'terzoconto-rendiconto-ets'),
+			'tipo' => esc_html__('Tipo', 'terzoconto-rendiconto-ets'),
+			'importo' => esc_html__('Importo', 'terzoconto-rendiconto-ets'),
+			'conto' => esc_html__('Conto', 'terzoconto-rendiconto-ets'),
+			'categoria' => esc_html__('Categoria', 'terzoconto-rendiconto-ets'),
+			'raccolta' => esc_html__('Raccolta', 'terzoconto-rendiconto-ets'),
+			'anagrafica' => esc_html__('Anagrafica', 'terzoconto-rendiconto-ets'),
+			'descrizione' => esc_html__('Descrizione', 'terzoconto-rendiconto-ets'),
 		];
 	}
 	
@@ -93,7 +93,7 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         $actions['edit'] = sprintf(
             '<a href="%s">%s</a>',
             esc_url($edit_url),
-            esc_html__('Modifica', 'terzo-conto')
+            esc_html__('Modifica', 'terzoconto-rendiconto-ets')
         );
 
 		// 2. ANNULLA (Visibile solo se il movimento è attivo)
@@ -110,8 +110,8 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
 						'terzoconto_action_nonce'
 					)
 				),
-                esc_js(__('Confermi di voler annullare questo movimento?', 'terzo-conto')),
-                esc_html__('Annulla', 'terzo-conto')
+                esc_js(__('Confermi di voler annullare questo movimento?', 'terzoconto-rendiconto-ets')),
+                esc_html__('Annulla', 'terzoconto-rendiconto-ets')
 			);
 		}
 
@@ -130,9 +130,9 @@ class TerzoConto_Movimenti_List_Table extends WP_List_Table {
         ];
 
         if (($item['stato'] ?? '') === 'annullato') {
-            return wp_kses('<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Annullato', 'terzo-conto') . '</span>', $allowed_status_html);
+            return wp_kses('<span style="background:#d63638; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Annullato', 'terzoconto-rendiconto-ets') . '</span>', $allowed_status_html);
         }
-        return wp_kses('<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Attivo', 'terzo-conto') . '</span>', $allowed_status_html);
+        return wp_kses('<span style="background:#00a32a; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;">' . esc_html__('Attivo', 'terzoconto-rendiconto-ets') . '</span>', $allowed_status_html);
     }
 
     public function prepare_items(): void {

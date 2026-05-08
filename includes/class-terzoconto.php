@@ -51,6 +51,6 @@ class TerzoConto {
     }
 
     public function load_textdomain(): void {
-        load_plugin_textdomain('terzo-conto', false, dirname(plugin_basename(TERZOCONTO_PLUGIN_FILE)) . '/languages');
+        load_plugin_textdomain('terzoconto-rendiconto-ets', false, dirname(plugin_basename(TERZOCONTO_PLUGIN_FILE)) . '/languages');
     }
 }

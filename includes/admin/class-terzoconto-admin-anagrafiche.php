@@ -19,8 +19,8 @@ class TerzoConto_Admin_Anagrafiche {
     public function register_menu(): void {
         add_submenu_page(
             'terzoconto',
-            __('Anagrafiche', 'terzo-conto'),
-            __('Anagrafiche', 'terzo-conto'),
+            __('Anagrafiche', 'terzoconto-rendiconto-ets'),
+            __('Anagrafiche', 'terzoconto-rendiconto-ets'),
             'manage_options',
             'terzoconto-anagrafiche',
             [$this, 'render_page']
@@ -67,7 +67,7 @@ class TerzoConto_Admin_Anagrafiche {
 
     public function render_page(): void {
         if (! current_user_can('manage_options')) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         $edit_id = absint(wp_unslash($_GET['edit_id'] ?? 0));
@@ -78,7 +78,7 @@ class TerzoConto_Admin_Anagrafiche {
         $rows = $this->anagrafiche_repository->search('');
 
         echo '<div class="wrap">';
-        echo '<h1>' . esc_html__('Anagrafiche', 'terzo-conto') . '</h1>';
+        echo '<h1>' . esc_html__('Anagrafiche', 'terzoconto-rendiconto-ets') . '</h1>';
 
         $this->render_notice();
         settings_errors('terzoconto_anagrafiche');
@@ -90,7 +90,7 @@ class TerzoConto_Admin_Anagrafiche {
 
     public function ajax_search_anagrafiche(): void {
         if (! current_user_can('manage_options')) {
-            wp_send_json_error(['message' => esc_html__('Non autorizzato.', 'terzo-conto')], 403);
+            wp_send_json_error(['message' => esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets')], 403);
         }
 
         check_ajax_referer('terzoconto_search_anagrafiche_nonce', 'nonce');
@@ -114,18 +114,18 @@ class TerzoConto_Admin_Anagrafiche {
         $status = sanitize_text_field(wp_unslash($_GET['tc_anagrafica_status'] ?? ''));
 
         if ($status === 'created') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Anagrafica creata con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Anagrafica creata con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'updated') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Anagrafica aggiornata con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Anagrafica aggiornata con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'error') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione non riuscita.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione non riuscita.', 'terzoconto-rendiconto-ets') . '</p></div>';
         }
     }
 
     private function render_form(?array $anagrafica): void {
         $is_edit = is_array($anagrafica);
 
-        echo '<h2>' . esc_html($is_edit ? __('Modifica anagrafica', 'terzo-conto') : __('Nuova anagrafica', 'terzo-conto')) . '</h2>';
+        echo '<h2>' . esc_html($is_edit ? __('Modifica anagrafica', 'terzoconto-rendiconto-ets') : __('Nuova anagrafica', 'terzoconto-rendiconto-ets')) . '</h2>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_anagrafica_action_nonce');
 
@@ -135,22 +135,22 @@ class TerzoConto_Admin_Anagrafiche {
         }
 
         echo '<table class="form-table" role="presentation"><tbody>';
-        echo '<tr><th scope="row"><label for="tipo">' . esc_html__('Tipo', 'terzo-conto') . '</label></th><td>';
+        echo '<tr><th scope="row"><label for="tipo">' . esc_html__('Tipo', 'terzoconto-rendiconto-ets') . '</label></th><td>';
         echo '<select id="tipo" name="tipo">';
         $selected_tipo = $anagrafica['tipo'] ?? 'persona';
-        echo '<option value="persona"' . selected($selected_tipo, 'persona', false) . '>' . esc_html__('Persona', 'terzo-conto') . '</option>';
-        echo '<option value="azienda"' . selected($selected_tipo, 'azienda', false) . '>' . esc_html__('Azienda', 'terzo-conto') . '</option>';
+        echo '<option value="persona"' . selected($selected_tipo, 'persona', false) . '>' . esc_html__('Persona', 'terzoconto-rendiconto-ets') . '</option>';
+        echo '<option value="azienda"' . selected($selected_tipo, 'azienda', false) . '>' . esc_html__('Azienda', 'terzoconto-rendiconto-ets') . '</option>';
         echo '</select></td></tr>';
 
-        $this->render_input_row('nome', __('Nome', 'terzo-conto'), $anagrafica['nome'] ?? '');
-        $this->render_input_row('cognome', __('Cognome', 'terzo-conto'), $anagrafica['cognome'] ?? '');
-        $this->render_input_row('ragione_sociale', __('Ragione sociale', 'terzo-conto'), $anagrafica['ragione_sociale'] ?? '');
-        $this->render_input_row('codice_fiscale', __('Codice fiscale', 'terzo-conto'), $anagrafica['codice_fiscale'] ?? '');
-        $this->render_input_row('email', __('Email', 'terzo-conto'), $anagrafica['email'] ?? '', 'email');
-        $this->render_input_row('telefono', __('Telefono', 'terzo-conto'), $anagrafica['telefono'] ?? '');
+        $this->render_input_row('nome', __('Nome', 'terzoconto-rendiconto-ets'), $anagrafica['nome'] ?? '');
+        $this->render_input_row('cognome', __('Cognome', 'terzoconto-rendiconto-ets'), $anagrafica['cognome'] ?? '');
+        $this->render_input_row('ragione_sociale', __('Ragione sociale', 'terzoconto-rendiconto-ets'), $anagrafica['ragione_sociale'] ?? '');
+        $this->render_input_row('codice_fiscale', __('Codice fiscale', 'terzoconto-rendiconto-ets'), $anagrafica['codice_fiscale'] ?? '');
+        $this->render_input_row('email', __('Email', 'terzoconto-rendiconto-ets'), $anagrafica['email'] ?? '', 'email');
+        $this->render_input_row('telefono', __('Telefono', 'terzoconto-rendiconto-ets'), $anagrafica['telefono'] ?? '');
 
         echo '</tbody></table>';
-        submit_button($is_edit ? __('Aggiorna anagrafica', 'terzo-conto') : __('Aggiungi anagrafica', 'terzo-conto'));
+        submit_button($is_edit ? __('Aggiorna anagrafica', 'terzoconto-rendiconto-ets') : __('Aggiungi anagrafica', 'terzoconto-rendiconto-ets'));
         echo '</form><hr />';
     }
 
@@ -161,17 +161,17 @@ class TerzoConto_Admin_Anagrafiche {
     }
 
     private function render_table(array $rows): void {
-        echo '<h2>' . esc_html__('Elenco anagrafiche', 'terzo-conto') . '</h2>';
+        echo '<h2>' . esc_html__('Elenco anagrafiche', 'terzoconto-rendiconto-ets') . '</h2>';
         echo '<table class="widefat fixed striped">';
         echo '<thead><tr>';
-        echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Codice fiscale', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Email', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Telefono', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Nome', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Codice fiscale', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Email', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Telefono', 'terzoconto-rendiconto-ets') . '</th>';
         echo '</tr></thead><tbody>';
 
         if (empty($rows)) {
-            echo '<tr><td colspan="4">' . esc_html__('Nessuna anagrafica presente.', 'terzo-conto') . '</td></tr>';
+            echo '<tr><td colspan="4">' . esc_html__('Nessuna anagrafica presente.', 'terzoconto-rendiconto-ets') . '</td></tr>';
         } else {
             foreach ($rows as $row) {
                 $name = $this->build_label($row);
@@ -217,28 +217,28 @@ class TerzoConto_Admin_Anagrafiche {
 
         if ($data['tipo'] === 'azienda') {
             if ($data['ragione_sociale'] === '') {
-                add_settings_error('terzoconto_anagrafiche', 'anagrafica_ragione_sociale', __('Per le aziende la ragione sociale è obbligatoria.', 'terzo-conto'), 'error');
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_ragione_sociale', __('Per le aziende la ragione sociale è obbligatoria.', 'terzoconto-rendiconto-ets'), 'error');
                 $is_valid = false;
             }
         } else {
             if ($data['nome'] === '') {
-                add_settings_error('terzoconto_anagrafiche', 'anagrafica_nome', __('Per le persone il nome è obbligatorio.', 'terzo-conto'), 'error');
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_nome', __('Per le persone il nome è obbligatorio.', 'terzoconto-rendiconto-ets'), 'error');
                 $is_valid = false;
             }
 
             if ($data['cognome'] === '') {
-                add_settings_error('terzoconto_anagrafiche', 'anagrafica_cognome', __('Per le persone il cognome è obbligatorio.', 'terzo-conto'), 'error');
+                add_settings_error('terzoconto_anagrafiche', 'anagrafica_cognome', __('Per le persone il cognome è obbligatorio.', 'terzoconto-rendiconto-ets'), 'error');
                 $is_valid = false;
             }
         }
 
         if ($data['email'] !== '' && ! is_email($data['email'])) {
-            add_settings_error('terzoconto_anagrafiche', 'anagrafica_email', __('Inserisci un indirizzo email valido.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_anagrafiche', 'anagrafica_email', __('Inserisci un indirizzo email valido.', 'terzoconto-rendiconto-ets'), 'error');
             $is_valid = false;
         }
 
         if ($data['codice_fiscale'] === '') {
-            add_settings_error('terzoconto_anagrafiche', 'anagrafica_codice_fiscale', __('Il codice fiscale è obbligatorio.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_anagrafiche', 'anagrafica_codice_fiscale', __('Il codice fiscale è obbligatorio.', 'terzoconto-rendiconto-ets'), 'error');
             $is_valid = false;
         }
 
@@ -256,7 +256,7 @@ class TerzoConto_Admin_Anagrafiche {
         }
 
         if ($label === '') {
-            $label = (string) __('Anagrafica senza nome', 'terzo-conto');
+            $label = (string) __('Anagrafica senza nome', 'terzoconto-rendiconto-ets');
         }
 
         return $label;

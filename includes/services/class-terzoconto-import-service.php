@@ -174,7 +174,7 @@ class TerzoConto_Import_Service {
         if ($actual_columns !== $expected_columns) {
             $errors[] = sprintf(
                 /* translators: %d: expected columns count */
-                __('Numero colonne non valido. Attese %d colonne.', 'terzo-conto'),
+                __('Numero colonne non valido. Attese %d colonne.', 'terzoconto-rendiconto-ets'),
                 $expected_columns
             );
         }
@@ -186,29 +186,29 @@ class TerzoConto_Import_Service {
 
         $parsed_date = $this->parse_date_value($data_value);
         if ($parsed_date === null) {
-            $errors[] = __('Data non valida. Usa YYYY-MM-DD o DD/MM/YYYY.', 'terzo-conto');
+            $errors[] = __('Data non valida. Usa YYYY-MM-DD o DD/MM/YYYY.', 'terzoconto-rendiconto-ets');
         }
 
         $parsed_amount = $this->parse_amount_value($importo_value);
         if ($parsed_amount === null) {
-            $errors[] = __('Importo non numerico.', 'terzo-conto');
+            $errors[] = __('Importo non numerico.', 'terzoconto-rendiconto-ets');
         }
 
         if ($descrizione_value === '') {
-            $errors[] = __('Descrizione obbligatoria.', 'terzo-conto');
+            $errors[] = __('Descrizione obbligatoria.', 'terzoconto-rendiconto-ets');
         }
 
         $tipo = '';
         if ($has_tipo) {
             $tipo_normalized = strtoupper($tipo_value);
             if (! in_array($tipo_normalized, ['E', 'U'], true)) {
-                $errors[] = __('Tipo non valido. Usa E o U.', 'terzo-conto');
+                $errors[] = __('Tipo non valido. Usa E o U.', 'terzoconto-rendiconto-ets');
             } else {
                 $tipo = $tipo_normalized === 'E' ? 'entrata' : 'uscita';
             }
 
             if ($parsed_amount !== null && $parsed_amount < 0) {
-                $errors[] = __('Nel formato con colonna tipo gli importi devono essere positivi.', 'terzo-conto');
+                $errors[] = __('Nel formato con colonna tipo gli importi devono essere positivi.', 'terzoconto-rendiconto-ets');
             }
         } elseif ($parsed_amount !== null) {
             $tipo = $parsed_amount < 0 ? 'uscita' : 'entrata';

@@ -45,20 +45,20 @@ class TerzoConto_Admin {
     public function register_menu(): void {
         $cap = 'manage_options';
         add_menu_page(
-            esc_html__('TerzoConto', 'terzo-conto'),
-            esc_html__('TerzoConto', 'terzo-conto'),
+            esc_html__('TerzoConto', 'terzoconto-rendiconto-ets'),
+            esc_html__('TerzoConto', 'terzoconto-rendiconto-ets'),
             $cap,
             'terzoconto',
             [$this, 'render_movimenti'],
             'dashicons-ledger',
             30
         );
-        add_submenu_page('terzoconto', __('Movimenti', 'terzo-conto'), __('Movimenti', 'terzo-conto'), $cap, 'terzoconto', [$this, 'render_movimenti']);
-        add_submenu_page('terzoconto', __('Categorie', 'terzo-conto'), __('Categorie', 'terzo-conto'), $cap, 'terzoconto-categorie', [$this, 'render_categorie']);
-        add_submenu_page('terzoconto', __('Conti', 'terzo-conto'), __('Conti', 'terzo-conto'), $cap, 'terzoconto-conti', [$this, 'render_conti']);
-        add_submenu_page('terzoconto', __('Raccolte fondi', 'terzo-conto'), __('Raccolte fondi', 'terzo-conto'), $cap, 'terzoconto-raccolte', [$this, 'render_raccolte']);
-        add_submenu_page('terzoconto', __('Import', 'terzo-conto'), __('Import', 'terzo-conto'), $cap, 'terzoconto-import', [$this, 'render_import']);
-        add_submenu_page('terzoconto', __('Report', 'terzo-conto'), __('Report', 'terzo-conto'), $cap, 'terzoconto-report', [$this, 'render_report']);
+        add_submenu_page('terzoconto', __('Movimenti', 'terzoconto-rendiconto-ets'), __('Movimenti', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto', [$this, 'render_movimenti']);
+        add_submenu_page('terzoconto', __('Categorie', 'terzoconto-rendiconto-ets'), __('Categorie', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto-categorie', [$this, 'render_categorie']);
+        add_submenu_page('terzoconto', __('Conti', 'terzoconto-rendiconto-ets'), __('Conti', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto-conti', [$this, 'render_conti']);
+        add_submenu_page('terzoconto', __('Raccolte fondi', 'terzoconto-rendiconto-ets'), __('Raccolte fondi', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto-raccolte', [$this, 'render_raccolte']);
+        add_submenu_page('terzoconto', __('Import', 'terzoconto-rendiconto-ets'), __('Import', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto-import', [$this, 'render_import']);
+        add_submenu_page('terzoconto', __('Report', 'terzoconto-rendiconto-ets'), __('Report', 'terzoconto-rendiconto-ets'), $cap, 'terzoconto-report', [$this, 'render_report']);
     }
 
     public function handle_post_actions(): void {
@@ -156,7 +156,7 @@ class TerzoConto_Admin {
 
     public function render_movimenti(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         $stato_filter = $this->get_movimento_stato_filter();
@@ -196,7 +196,7 @@ class TerzoConto_Admin {
             }));
         }
 
-        echo '<div class="wrap"><h1>' . esc_html__('TerzoConto - Movimenti', 'terzo-conto') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('TerzoConto - Movimenti', 'terzoconto-rendiconto-ets') . '</h1>';
         $this->render_movimenti_notice(); 
 		settings_errors('terzoconto');
         $this->render_movimento_form($categorie, $conti, $raccolte, $anagrafiche, $movimento);
@@ -210,38 +210,38 @@ class TerzoConto_Admin {
 
 		echo '<div style="margin:10px 0;padding:10px;background:#fff;border:1px solid #ccd0d4;">';
 
-		echo '<strong>' . esc_html__('Modifica massiva', 'terzo-conto') . '</strong><br /><br />';
+		echo '<strong>' . esc_html__('Modifica massiva', 'terzoconto-rendiconto-ets') . '</strong><br /><br />';
 
 		echo '<select name="bulk_categoria_id">';
-		echo '<option value="">' . esc_html__('-- Categoria (opzionale) --', 'terzo-conto') . '</option>';
+		echo '<option value="">' . esc_html__('-- Categoria (opzionale) --', 'terzoconto-rendiconto-ets') . '</option>';
 		foreach ($categorie as $cat) {
 			echo '<option value="'.esc_attr($cat['id']).'">'.esc_html($cat['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_conto_id">';
-		echo '<option value="">' . esc_html__('-- Conto (opzionale) --', 'terzo-conto') . '</option>';
+		echo '<option value="">' . esc_html__('-- Conto (opzionale) --', 'terzoconto-rendiconto-ets') . '</option>';
 		foreach ($conti as $conto) {
 			echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_raccolta_id">';
-		echo '<option value="">' . esc_html__('-- Raccolta (opzionale) --', 'terzo-conto') . '</option>';
+		echo '<option value="">' . esc_html__('-- Raccolta (opzionale) --', 'terzoconto-rendiconto-ets') . '</option>';
 		foreach ($raccolte as $raccolta) {
 			echo '<option value="'.esc_attr($raccolta['id']).'">'.esc_html($raccolta['nome']).'</option>';
 		}
 		echo '</select> ';
 
 		echo '<select name="bulk_anagrafica_id">';
-		echo '<option value="">' . esc_html__('-- Anagrafica (opzionale) --', 'terzo-conto') . '</option>';
+		echo '<option value="">' . esc_html__('-- Anagrafica (opzionale) --', 'terzoconto-rendiconto-ets') . '</option>';
 		foreach ($anagrafiche as $a) {
 			$label = $this->format_anagrafica_label($a);
 			echo '<option value="'.esc_attr($a['id']).'">'.esc_html($label).'</option>';
 		}
 		echo '</select> ';
 
-		submit_button(__('Applica ai selezionati', 'terzo-conto'), 'primary', '', false);
+		submit_button(__('Applica ai selezionati', 'terzoconto-rendiconto-ets'), 'primary', '', false);
 
 		echo '</div>';
 
@@ -419,11 +419,11 @@ class TerzoConto_Admin {
         // Notifiche standard creazione/modifica/annullamento
         $status = sanitize_text_field(wp_unslash($_GET['tc_movimento_status'] ?? ''));
         if ($status === 'created') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento creato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento creato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'updated') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento aggiornato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento aggiornato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'annullato') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento annullato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Movimento annullato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         }
 
         // Notifiche Modifica Massiva
@@ -431,35 +431,35 @@ class TerzoConto_Admin {
         if ($bulk_status === 'done') {
             $count = absint(wp_unslash($_GET['updated'] ?? 0));
 			/* translators: %d = number of movements updated */										  
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzo-conto'), $count)) . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html(sprintf(__('Modifica massiva applicata con successo a %d movimenti.', 'terzoconto-rendiconto-ets'), $count)) . '</p></div>';
         } elseif ($bulk_status === 'no_ids') {
-            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun movimento selezionato. Seleziona almeno una riga usando le caselle di controllo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($bulk_status === 'no_fields') {
-            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun campo selezionato per la modifica massiva. Scegli almeno un valore dai menu a tendina.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Nessun campo selezionato per la modifica massiva. Scegli almeno un valore dai menu a tendina.', 'terzoconto-rendiconto-ets') . '</p></div>';
         }
     }
 
     public function render_categorie(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         $categorie = $this->categorie->get_associazione();
 
-        echo '<div class="wrap"><h1>' . esc_html__('Categorie', 'terzo-conto') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('Categorie', 'terzoconto-rendiconto-ets') . '</h1>';
         echo '<form method="post" enctype="multipart/form-data">';
 		wp_nonce_field('terzoconto_action_nonce');
 		echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
 		echo '<p><select name="provider">
-		<option value="generico">' . esc_html__('CSV generico', 'terzo-conto') . '</option>
-		<option value="paypal">' . esc_html__('CSV PayPal', 'terzo-conto') . '</option>
-		<option value="satispay">' . esc_html__('CSV Satispay', 'terzo-conto') . '</option>
+		<option value="generico">' . esc_html__('CSV generico', 'terzoconto-rendiconto-ets') . '</option>
+		<option value="paypal">' . esc_html__('CSV PayPal', 'terzoconto-rendiconto-ets') . '</option>
+		<option value="satispay">' . esc_html__('CSV Satispay', 'terzoconto-rendiconto-ets') . '</option>
 		</select></p>';
 		echo '<p><input type="file" name="csv_file" accept=".csv" required /></p>';
-		submit_button(__('Carica e anteprima', 'terzo-conto'));
+		submit_button(__('Carica e anteprima', 'terzoconto-rendiconto-ets'));
 		echo '</form>';
 
-        echo '<table class="widefat"><thead><tr><th>' . esc_html__('Nome', 'terzo-conto') . '</th><th>' . esc_html__('Modello D', 'terzo-conto') . '</th></tr></thead><tbody>';
+        echo '<table class="widefat"><thead><tr><th>' . esc_html__('Nome', 'terzoconto-rendiconto-ets') . '</th><th>' . esc_html__('Modello D', 'terzoconto-rendiconto-ets') . '</th></tr></thead><tbody>';
         foreach ($categorie as $cat) {
             echo '<tr><td>' . esc_html($cat['nome']) . '</td><td>' . esc_html($cat['modello_d_codice'] . ' - ' . $cat['modello_d_nome']) . '</td></tr>';
         }
@@ -468,7 +468,7 @@ class TerzoConto_Admin {
 
     public function render_conti(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         $edit_id = absint(wp_unslash($_GET['edit_conto_id'] ?? 0));
@@ -486,7 +486,7 @@ class TerzoConto_Admin {
 
     public function render_raccolte(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         $edit_id = absint(wp_unslash($_GET['edit_raccolta_id'] ?? 0));
@@ -498,7 +498,7 @@ class TerzoConto_Admin {
         $is_edit = is_array($raccolta) && !empty($raccolta['id']);
         $raccolte = $this->raccolte->get_all();
 
-        echo '<div class="wrap"><h1>' . esc_html__('Raccolte fondi', 'terzo-conto') . '</h1>';
+        echo '<div class="wrap"><h1>' . esc_html__('Raccolte fondi', 'terzoconto-rendiconto-ets') . '</h1>';
         echo '<style>
             .terzoconto-raccolte-form-grid {
                 display: grid;
@@ -537,8 +537,8 @@ class TerzoConto_Admin {
         $this->render_raccolte_notice();
         settings_errors('terzoconto_raccolte');
 
-        echo '<h2>' . esc_html($is_edit ? __('Modifica raccolta fondi', 'terzo-conto') : __('Nuova raccolta fondi', 'terzo-conto')) . '</h2>';
-        echo '<p class="terzoconto-raccolte-help">' . esc_html__('Compila i dati della raccolta fondi occasionale. La relazione illustrativa verrà utilizzata per i report ufficiali RUNTS.', 'terzo-conto') . '</p>';
+        echo '<h2>' . esc_html($is_edit ? __('Modifica raccolta fondi', 'terzoconto-rendiconto-ets') : __('Nuova raccolta fondi', 'terzoconto-rendiconto-ets')) . '</h2>';
+        echo '<p class="terzoconto-raccolte-help">' . esc_html__('Compila i dati della raccolta fondi occasionale. La relazione illustrativa verrà utilizzata per i report ufficiali RUNTS.', 'terzoconto-rendiconto-ets') . '</p>';
         echo '<form method="post">';
         wp_nonce_field('terzoconto_action_nonce');
         echo '<input type="hidden" name="terzoconto_action" value="' . esc_attr($is_edit ? 'update_raccolta' : 'add_raccolta') . '" />';
@@ -546,38 +546,38 @@ class TerzoConto_Admin {
             echo '<input type="hidden" name="id" value="' . esc_attr((string) $raccolta['id']) . '" />';
         }
         echo '<div class="terzoconto-raccolte-form-grid">';
-        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome', 'terzo-conto') . '" value="' . esc_attr((string) ($raccolta['nome'] ?? '')) . '" /></p>';
-        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzo-conto') . '" value="' . esc_attr((string) ($raccolta['descrizione'] ?? '')) . '" /></p>';
+        echo '<p><input type="text" name="nome" required placeholder="' . esc_attr__('Nome', 'terzoconto-rendiconto-ets') . '" value="' . esc_attr((string) ($raccolta['nome'] ?? '')) . '" /></p>';
+        echo '<p><input type="text" name="descrizione" placeholder="' . esc_attr__('Descrizione', 'terzoconto-rendiconto-ets') . '" value="' . esc_attr((string) ($raccolta['descrizione'] ?? '')) . '" /></p>';
         echo '<p><input type="date" name="data_inizio" required value="' . esc_attr((string) ($raccolta['data_inizio'] ?? '')) . '" /></p>';
         echo '<p><input type="date" name="data_fine" value="' . esc_attr((string) ($raccolta['data_fine'] ?? '')) . '" /></p>';
         echo '<p><select name="stato">';
-        echo '<option value="aperta" ' . selected((string) ($raccolta['stato'] ?? 'aperta'), 'aperta', false) . '>' . esc_html__('Aperta', 'terzo-conto') . '</option>';
-        echo '<option value="chiusa" ' . selected((string) ($raccolta['stato'] ?? ''), 'chiusa', false) . '>' . esc_html__('Chiusa', 'terzo-conto') . '</option>';
+        echo '<option value="aperta" ' . selected((string) ($raccolta['stato'] ?? 'aperta'), 'aperta', false) . '>' . esc_html__('Aperta', 'terzoconto-rendiconto-ets') . '</option>';
+        echo '<option value="chiusa" ' . selected((string) ($raccolta['stato'] ?? ''), 'chiusa', false) . '>' . esc_html__('Chiusa', 'terzoconto-rendiconto-ets') . '</option>';
         echo '</select></p>';
-        echo '<p style="grid-column:1 / -1;"><label for="tc-relazione-illustrativa">' . esc_html__('Relazione illustrativa (per report RUNTS)', 'terzo-conto') . '</label><br />';
-        echo '<textarea id="tc-relazione-illustrativa" name="relazione_illustrativa" rows="8" placeholder="' . esc_attr__('Descrizione narrativa della raccolta fondi', 'terzo-conto') . '">' . esc_textarea((string) ($raccolta['relazione_illustrativa'] ?? '')) . '</textarea>';
-        echo '<small style="display:block;margin-top:4px;color:#646970;">' . esc_html__('Inserire una descrizione della raccolta fondi (contesto, modalità, finalità e utilizzo dei fondi). Questo testo sarà utilizzato nei report ufficiali.', 'terzo-conto') . '</small></p>';
+        echo '<p style="grid-column:1 / -1;"><label for="tc-relazione-illustrativa">' . esc_html__('Relazione illustrativa (per report RUNTS)', 'terzoconto-rendiconto-ets') . '</label><br />';
+        echo '<textarea id="tc-relazione-illustrativa" name="relazione_illustrativa" rows="8" placeholder="' . esc_attr__('Descrizione narrativa della raccolta fondi', 'terzoconto-rendiconto-ets') . '">' . esc_textarea((string) ($raccolta['relazione_illustrativa'] ?? '')) . '</textarea>';
+        echo '<small style="display:block;margin-top:4px;color:#646970;">' . esc_html__('Inserire una descrizione della raccolta fondi (contesto, modalità, finalità e utilizzo dei fondi). Questo testo sarà utilizzato nei report ufficiali.', 'terzoconto-rendiconto-ets') . '</small></p>';
         echo '</div>';
-        submit_button($is_edit ? __('Aggiorna raccolta', 'terzo-conto') : __('Aggiungi raccolta', 'terzo-conto'));
+        submit_button($is_edit ? __('Aggiorna raccolta', 'terzoconto-rendiconto-ets') : __('Aggiungi raccolta', 'terzoconto-rendiconto-ets'));
         echo '</form><hr />';
 
-        echo '<h2>' . esc_html__('Elenco raccolte fondi', 'terzo-conto') . '</h2>';
+        echo '<h2>' . esc_html__('Elenco raccolte fondi', 'terzoconto-rendiconto-ets') . '</h2>';
         echo '<table class="widefat fixed striped">';
         echo '<thead><tr>';
-        echo '<th>' . esc_html__('Nome', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Stato', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Periodo', 'terzo-conto') . '</th>';
-        echo '<th>' . esc_html__('Azioni', 'terzo-conto') . '</th>';
+        echo '<th>' . esc_html__('Nome', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Stato', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Periodo', 'terzoconto-rendiconto-ets') . '</th>';
+        echo '<th>' . esc_html__('Azioni', 'terzoconto-rendiconto-ets') . '</th>';
         echo '</tr></thead><tbody>';
 
         if ($raccolte === []) {
-            echo '<tr><td colspan="4">' . esc_html__('Nessuna raccolta presente.', 'terzo-conto') . '</td></tr>';
+            echo '<tr><td colspan="4">' . esc_html__('Nessuna raccolta presente.', 'terzoconto-rendiconto-ets') . '</td></tr>';
         }
 
         foreach ($raccolte as $raccolta) {
             $edit_url = add_query_arg(['page' => 'terzoconto-raccolte', 'edit_raccolta_id' => (int) $raccolta['id']], admin_url('admin.php'));
             $is_open = (string) ($raccolta['stato'] ?? '') === 'aperta';
-            $status_label = $is_open ? __('Aperta', 'terzo-conto') : __('Chiusa', 'terzo-conto');
+            $status_label = $is_open ? __('Aperta', 'terzoconto-rendiconto-ets') : __('Chiusa', 'terzoconto-rendiconto-ets');
             $status_class = $is_open ? 'is-open' : 'is-closed';
             $cannot_delete = ! $this->raccolte->can_delete((int) $raccolta['id']);
             $data_inizio = (string) ($raccolta['data_inizio'] ?? '');
@@ -592,19 +592,19 @@ class TerzoConto_Admin {
             echo '<td><span class="terzoconto-raccolte-status-badge ' . esc_attr($status_class) . '">' . esc_html($status_label) . '</span></td>';
             echo '<td>' . esc_html($periodo) . '</td>';
             echo '<td>';
-            echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzo-conto') . '</a> ';
+            echo '<a class="button button-secondary" href="' . esc_url($edit_url) . '">' . esc_html__('Modifica', 'terzoconto-rendiconto-ets') . '</a> ';
             echo '<form method="post" style="display:inline-block;margin-left:6px;">';
             wp_nonce_field('terzoconto_action_nonce');
             echo '<input type="hidden" name="terzoconto_action" value="delete_raccolta" />';
             echo '<input type="hidden" name="id" value="' . esc_attr((string) $raccolta['id']) . '" />';
             if ($cannot_delete) {
-                echo '<button type="submit" class="button button-link-delete" disabled="disabled" title="' . esc_attr__('La raccolta è associata a movimenti e non può essere eliminata.', 'terzo-conto') . '">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
+                echo '<button type="submit" class="button button-link-delete" disabled="disabled" title="' . esc_attr__('La raccolta è associata a movimenti e non può essere eliminata.', 'terzoconto-rendiconto-ets') . '">' . esc_html__('Elimina', 'terzoconto-rendiconto-ets') . '</button>';
             } else {
-                echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero eliminare questa raccolta?', 'terzo-conto')) . '\');">' . esc_html__('Elimina', 'terzo-conto') . '</button>';
+                echo '<button type="submit" class="button button-link-delete" onclick="return confirm(\'' . esc_js(__('Vuoi davvero eliminare questa raccolta?', 'terzoconto-rendiconto-ets')) . '\');">' . esc_html__('Elimina', 'terzoconto-rendiconto-ets') . '</button>';
             }
             echo '</form>';
             if ($cannot_delete) {
-                echo '<br /><small>' . esc_html__('Non eliminabile: raccolta associata a movimenti.', 'terzo-conto') . '</small>';
+                echo '<br /><small>' . esc_html__('Non eliminabile: raccolta associata a movimenti.', 'terzoconto-rendiconto-ets') . '</small>';
             }
             echo '</td>';
             echo '</tr>';
@@ -615,7 +615,7 @@ class TerzoConto_Admin {
 
     public function render_import(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
 
@@ -624,32 +624,32 @@ class TerzoConto_Admin {
 		$categorie = $this->categorie->get_associazione();
 		$conti = $this->conti->get_all();
 
-		echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzo-conto') . '</h1>';
+		echo '<div class="wrap"><h1>' . esc_html__('Import CSV', 'terzoconto-rendiconto-ets') . '</h1>';
 
 		settings_errors('terzoconto');
 		
 		echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px 16px;margin:12px 0;max-width:900px;">';
 
-		echo '<strong>' . esc_html__('Formato CSV richiesto', 'terzo-conto') . '</strong><br /><br />';
+		echo '<strong>' . esc_html__('Formato CSV richiesto', 'terzoconto-rendiconto-ets') . '</strong><br /><br />';
 
 		echo '<ul style="margin-left:18px;">';
-		echo '<li>' . esc_html__('Separatore:', 'terzo-conto') . ' <strong>' . esc_html__('punto e virgola ( ; )', 'terzo-conto') . '</strong></li>';
-		echo '<li>' . esc_html__('Encoding: UTF-8', 'terzo-conto') . '</li>';
-		echo '<li>' . esc_html__('Numero colonne: 3 oppure 4', 'terzo-conto') . '</li>';
+		echo '<li>' . esc_html__('Separatore:', 'terzoconto-rendiconto-ets') . ' <strong>' . esc_html__('punto e virgola ( ; )', 'terzoconto-rendiconto-ets') . '</strong></li>';
+		echo '<li>' . esc_html__('Encoding: UTF-8', 'terzoconto-rendiconto-ets') . '</li>';
+		echo '<li>' . esc_html__('Numero colonne: 3 oppure 4', 'terzoconto-rendiconto-ets') . '</li>';
 		echo '</ul>';
 
-		echo '<strong>' . esc_html__('Formato a 3 colonne:', 'terzo-conto') . '</strong><br />';
+		echo '<strong>' . esc_html__('Formato a 3 colonne:', 'terzoconto-rendiconto-ets') . '</strong><br />';
 		echo '<code>data;importo;descrizione</code><br />';
-		echo '<small>' . esc_html__('Il tipo (entrata/uscita) viene dedotto automaticamente dal segno dell\'importo', 'terzo-conto') . '</small><br /><br />';
+		echo '<small>' . esc_html__('Il tipo (entrata/uscita) viene dedotto automaticamente dal segno dell\'importo', 'terzoconto-rendiconto-ets') . '</small><br /><br />';
 
-		echo '<strong>' . esc_html__('Formato a 4 colonne:', 'terzo-conto') . '</strong><br />';
+		echo '<strong>' . esc_html__('Formato a 4 colonne:', 'terzoconto-rendiconto-ets') . '</strong><br />';
 		echo '<code>data;importo;descrizione;tipo</code><br />';
-		echo '<small>' . esc_html__('Tipo: E = entrata, U = uscita (in questo formato gli importi devono essere positivi)', 'terzo-conto') . '</small><br /><br />';
+		echo '<small>' . esc_html__('Tipo: E = entrata, U = uscita (in questo formato gli importi devono essere positivi)', 'terzoconto-rendiconto-ets') . '</small><br /><br />';
 
-		echo '<strong>' . esc_html__('Formato data:', 'terzo-conto') . '</strong> ' . esc_html__('YYYY-MM-DD oppure DD/MM/YYYY', 'terzo-conto') . '<br />';
-		echo '<strong>' . esc_html__('Importo:', 'terzo-conto') . '</strong> ' . esc_html__('numero (usa il punto come separatore decimale, es. 123.45)', 'terzo-conto') . '<br /><br />';
+		echo '<strong>' . esc_html__('Formato data:', 'terzoconto-rendiconto-ets') . '</strong> ' . esc_html__('YYYY-MM-DD oppure DD/MM/YYYY', 'terzoconto-rendiconto-ets') . '<br />';
+		echo '<strong>' . esc_html__('Importo:', 'terzoconto-rendiconto-ets') . '</strong> ' . esc_html__('numero (usa il punto come separatore decimale, es. 123.45)', 'terzoconto-rendiconto-ets') . '<br /><br />';
 
-		echo '<strong>' . esc_html__('Esempio valido:', 'terzo-conto') . '</strong><br />';
+		echo '<strong>' . esc_html__('Esempio valido:', 'terzoconto-rendiconto-ets') . '</strong><br />';
 		echo '<pre style="background:#f6f7f7;padding:8px;">';
 		echo "data;importo;descrizione;tipo\n";
 		echo "2025-10-31;50.00;Donazione evento;E\n";
@@ -663,12 +663,12 @@ class TerzoConto_Admin {
 		wp_nonce_field('terzoconto_action_nonce');
 		echo '<input type="hidden" name="terzoconto_action" value="import_preview" />';
 		echo '<p><select name="provider">
-			<option value="generico">' . esc_html__('CSV generico', 'terzo-conto') . '</option>
-			<option value="paypal">' . esc_html__('CSV PayPal', 'terzo-conto') . '</option>
-			<option value="satispay">' . esc_html__('CSV Satispay', 'terzo-conto') . '</option>
+			<option value="generico">' . esc_html__('CSV generico', 'terzoconto-rendiconto-ets') . '</option>
+			<option value="paypal">' . esc_html__('CSV PayPal', 'terzoconto-rendiconto-ets') . '</option>
+			<option value="satispay">' . esc_html__('CSV Satispay', 'terzoconto-rendiconto-ets') . '</option>
 		</select></p>';
 		echo '<p><input type="file" name="csv_file" accept=".csv" required /></p>';
-		submit_button(__('Carica e anteprima', 'terzo-conto'));
+		submit_button(__('Carica e anteprima', 'terzoconto-rendiconto-ets'));
 		echo '</form>';
 
 		if (is_array($preview) && isset($preview['rows'])) {
@@ -677,9 +677,9 @@ class TerzoConto_Admin {
 			$valid_rows = $preview['valid_rows'];
 			$duplicates = $preview['duplicates'];
 
-			echo '<h2>' . esc_html__('Anteprima', 'terzo-conto') . '</h2>';
+			echo '<h2>' . esc_html__('Anteprima', 'terzoconto-rendiconto-ets') . '</h2>';
 			/* translators: 1: number of valid rows, 2: total rows */												
-			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzo-conto'), count($valid_rows), count($rows))) . '</p>';
+			echo '<p>' . esc_html(sprintf(__('Righe valide: %1$d su %2$d', 'terzoconto-rendiconto-ets'), count($valid_rows), count($rows))) . '</p>';
 
 			echo '<form method="post">';
 			wp_nonce_field('terzoconto_action_nonce');
@@ -713,8 +713,8 @@ class TerzoConto_Admin {
 
 				echo '<td>
 					<select name="rows[' . esc_attr($i) . '][tipo]">
-						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
-						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
+						<option value="entrata" ' . selected($row['tipo'], 'entrata', false) . '>' . esc_html__('Entrata', 'terzoconto-rendiconto-ets') . '</option>
+						<option value="uscita" ' . selected($row['tipo'], 'uscita', false) . '>' . esc_html__('Uscita', 'terzoconto-rendiconto-ets') . '</option>
 					</select>
 				</td>';
 
@@ -730,7 +730,7 @@ class TerzoConto_Admin {
 				) . '</td>';
 				
 				echo '<td><select name="rows['.  esc_attr($i) .'][conto_id]" required>';
-				echo '<option value="">' . esc_html__('-- conto --', 'terzo-conto') . '</option>';
+				echo '<option value="">' . esc_html__('-- conto --', 'terzoconto-rendiconto-ets') . '</option>';
 
 				foreach ($conti as $conto) {
 					echo '<option value="'.esc_attr($conto['id']).'">'.esc_html($conto['nome']).'</option>';
@@ -740,8 +740,8 @@ class TerzoConto_Admin {
 
 				$status = [];
 				if ($errors) $status[] = implode(' ', $errors);
-				if ($is_dupe) $status[] = __('Duplicato', 'terzo-conto');
-				if (! $status) $status[] = __('OK', 'terzo-conto');
+				if ($is_dupe) $status[] = __('Duplicato', 'terzoconto-rendiconto-ets');
+				if (! $status) $status[] = __('OK', 'terzoconto-rendiconto-ets');
 
 				echo '<td>' . esc_html(implode(' | ', $status)) . '</td>';
 
@@ -750,31 +750,31 @@ class TerzoConto_Admin {
 
 			echo '</tbody></table>';
 
-			submit_button(__('Importa tutto', 'terzo-conto'));
+			submit_button(__('Importa tutto', 'terzoconto-rendiconto-ets'));
 
 			echo '</form>';
 
-			echo '<h3>' . esc_html__('Importa righe valide', 'terzo-conto') . '</h3>';
+			echo '<h3>' . esc_html__('Importa righe valide', 'terzoconto-rendiconto-ets') . '</h3>';
 
 			echo '<form method="post">';
 			wp_nonce_field('terzoconto_action_nonce');
 			echo '<input type="hidden" name="terzoconto_action" value="import_commit" />';
 			
 			echo '<p><select name="categoria_associazione_id" required>';
-			echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzo-conto') . '</option>';
+			echo '<option value="0">' . esc_html__('Seleziona categoria', 'terzoconto-rendiconto-ets') . '</option>';
 			foreach ($categorie as $categoria) {
 			    echo '<option value="' . esc_attr($categoria['id']) . '">' . esc_html($categoria['nome']) . '</option>';
 			}
 			echo '</select></p>';
 			
 			echo '<p><select name="conto_id" required>';
-			echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
+			echo '<option value="0">' . esc_html__('Seleziona conto', 'terzoconto-rendiconto-ets') . '</option>';
 			foreach ($conti as $conto) {
 			    echo '<option value="' . esc_attr($conto['id']) . '">' . esc_html($conto['nome']) . '</option>';
 			}
 			echo '</select></p>';
 			
-			submit_button(__('Importa righe valide', 'terzo-conto'));
+			submit_button(__('Importa righe valide', 'terzoconto-rendiconto-ets'));
 			
 			echo '</form>';
 		}
@@ -784,7 +784,7 @@ class TerzoConto_Admin {
 
     public function render_report(): void {
         if (! $this->security->assert_manage_capability()) {
-            wp_die(esc_html__('Non autorizzato.', 'terzo-conto'));
+            wp_die(esc_html__('Non autorizzato.', 'terzoconto-rendiconto-ets'));
         }
 
         // Recuperiamo le impostazioni dell'ente per le intestazioni
@@ -825,11 +825,11 @@ class TerzoConto_Admin {
 
         // CONTROLLI (NON STAMPABILI)
         echo '<div class="tc-no-print" style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">';
-        echo '<h1>' . esc_html__('Report e Stampe', 'terzo-conto') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> ' . esc_html__('Stampa PDF', 'terzo-conto') . '</button></h1>';
+        echo '<h1>' . esc_html__('Report e Stampe', 'terzoconto-rendiconto-ets') . ' <button class="button button-primary tc-print-btn" onclick="window.print();"><span class="dashicons dashicons-printer" style="margin-top:4px;"></span> ' . esc_html__('Stampa PDF', 'terzoconto-rendiconto-ets') . '</button></h1>';
         
         echo '<h2 class="nav-tab-wrapper">';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">' . esc_html__('Modello D (Rendiconto per Cassa)', 'terzo-conto') . '</a>';
-        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">' . esc_html__('Report Raccolte Fondi', 'terzo-conto') . '</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'modello_d'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'modello_d' ? 'nav-tab-active' : '') . '">' . esc_html__('Modello D (Rendiconto per Cassa)', 'terzoconto-rendiconto-ets') . '</a>';
+        echo '<a href="' . esc_url(add_query_arg(['page' => 'terzoconto-report', 'tab' => 'raccolte'], admin_url('admin.php'))) . '" class="nav-tab ' . esc_attr($tab === 'raccolte' ? 'nav-tab-active' : '') . '">' . esc_html__('Report Raccolte Fondi', 'terzoconto-rendiconto-ets') . '</a>';
         echo '</h2>';
         echo '</div>'; // Fine area no-print
 
@@ -840,17 +840,17 @@ class TerzoConto_Admin {
             echo '<form method="get" style="display:inline-block; margin-right: 20px;">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="modello_d" />
-					<strong>' . esc_html__('Anno di riferimento:', 'terzo-conto') . '</strong>
+					<strong>' . esc_html__('Anno di riferimento:', 'terzoconto-rendiconto-ets') . '</strong>
 					<input type="number" name="year" value="' . esc_attr((string) $year) . '" min="2000" max="2100" style="width: 80px;" />';
 			
-            echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzo-conto'), 'secondary', '', false));
+            echo wp_kses_post(get_submit_button(__('Aggiorna', 'terzoconto-rendiconto-ets'), 'secondary', '', false));
 			
 			echo '</form>';
             // Form esportazione backup (lo teniamo qui)
             echo '<form method="post" style="display:inline-block;">';
             wp_nonce_field('terzoconto_action_nonce');
             echo '<input type="hidden" name="terzoconto_action" value="export_movimenti_csv" />';
-            submit_button(__('Backup Movimenti CSV', 'terzo-conto'), 'secondary', '', false);
+            submit_button(__('Backup Movimenti CSV', 'terzoconto-rendiconto-ets'), 'secondary', '', false);
             echo '</form>';
             echo '</div>';
 
@@ -960,11 +960,11 @@ class TerzoConto_Admin {
             echo '<form method="get">
                     <input type="hidden" name="page" value="terzoconto-report" />
                     <input type="hidden" name="tab" value="raccolte" />
-                    <strong>' . esc_html__('Seleziona Raccolta:', 'terzo-conto') . '</strong> <select name="raccolta_id">';
+                    <strong>' . esc_html__('Seleziona Raccolta:', 'terzoconto-rendiconto-ets') . '</strong> <select name="raccolta_id">';
             foreach ($raccolte_list as $r) {
                 echo '<option value="' . esc_attr((string) $r['id']) . '" ' . selected($raccolta_id, (int) $r['id'], false) . '>' . esc_html($r['nome']) . '</option>';
             }
-            echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzo-conto'), 'secondary', '', false));
+            echo '</select> ' . wp_kses_post(get_submit_button(__('Mostra Report', 'terzoconto-rendiconto-ets'), 'secondary', '', false));
             echo      '</form></div>';
 
             if ($raccolta_id > 0) {
@@ -977,7 +977,7 @@ class TerzoConto_Admin {
                 echo '<h3>C.F. ' . esc_html($cf_ente) . '</h3>';
                 echo '<br><h3>RENDICONTO DELLA SINGOLA RACCOLTA FONDI</h3>';
                 echo '<p><strong>' . esc_html($raccolta['nome']) . '</strong><br>';
-                echo 'Durata della raccolta: dal ' . esc_html(wp_date('d/m/Y', strtotime((string) $raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? wp_date('d/m/Y', strtotime((string) $raccolta['data_fine'])) : __('In corso', 'terzo-conto')) . '</p>';
+                echo 'Durata della raccolta: dal ' . esc_html(wp_date('d/m/Y', strtotime((string) $raccolta['data_inizio']))) . ' al ' . esc_html($raccolta['data_fine'] ? wp_date('d/m/Y', strtotime((string) $raccolta['data_fine'])) : __('In corso', 'terzoconto-rendiconto-ets')) . '</p>';
                 echo '</div>';
 
                 echo '<div style="max-width: 600px; margin: 0 auto; font-family: sans-serif;">';
@@ -1053,24 +1053,24 @@ class TerzoConto_Admin {
 		echo '<div class="terzoconto-movimento-grid">';
 
 		// DATA
-		echo '<p><label>' . esc_html__('Data movimento', 'terzo-conto') . '</label><br />
+		echo '<p><label>' . esc_html__('Data movimento', 'terzoconto-rendiconto-ets') . '</label><br />
 			<input type="date" name="data_movimento" required value="' . esc_attr((string) ($movimento['data_movimento'] ?? gmdate('Y-m-d'))) . '" /></p>';
 
 		// IMPORTO
-		echo '<p><label>' . esc_html__('Importo', 'terzo-conto') . '</label><br />
+		echo '<p><label>' . esc_html__('Importo', 'terzoconto-rendiconto-ets') . '</label><br />
 			<input type="text" name="importo" required value="' . esc_attr((string) ($movimento['importo'] ?? '')) . '" /></p>';
 
 		// TIPO
 		$tipo = $movimento['tipo'] ?? 'entrata';
-		echo '<p><label>' . esc_html__('Tipo', 'terzo-conto') . '</label><br />
+		echo '<p><label>' . esc_html__('Tipo', 'terzoconto-rendiconto-ets') . '</label><br />
 			<select name="tipo">
-				<option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzo-conto') . '</option>
-				<option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzo-conto') . '</option>
+				<option value="entrata"' . selected($tipo, 'entrata', false) . '>' . esc_html__('Entrata', 'terzoconto-rendiconto-ets') . '</option>
+				<option value="uscita"' . selected($tipo, 'uscita', false) . '>' . esc_html__('Uscita', 'terzoconto-rendiconto-ets') . '</option>
 			</select></p>';
 
 		// CATEGORIA
 		$selected_categoria = (int) ($movimento['categoria_associazione_id'] ?? 0);
-		echo '<p><label>' . esc_html__('Categoria', 'terzo-conto') . '</label><br />';
+		echo '<p><label>' . esc_html__('Categoria', 'terzoconto-rendiconto-ets') . '</label><br />';
 		echo wp_kses(
             $this->render_categoria_select_html($categorie, 'categoria_associazione_id', $selected_categoria, true),
             [
@@ -1091,8 +1091,8 @@ class TerzoConto_Admin {
 
 		// CONTO
 		$selected_conto = (int) ($movimento['conto_id'] ?? 0);
-		echo '<p><label>' . esc_html__('Conto', 'terzo-conto') . '</label><br /><select name="conto_id" required>';
-		echo '<option value="0">' . esc_html__('Seleziona conto', 'terzo-conto') . '</option>';
+		echo '<p><label>' . esc_html__('Conto', 'terzoconto-rendiconto-ets') . '</label><br /><select name="conto_id" required>';
+		echo '<option value="0">' . esc_html__('Seleziona conto', 'terzoconto-rendiconto-ets') . '</option>';
 		foreach ($conti as $conto) {
 			echo '<option value="' . esc_attr($conto['id']) . '"' . selected($selected_conto, (int)$conto['id'], false) . '>'
 				. esc_html($conto['nome']) .
@@ -1101,8 +1101,8 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// RACCOLTA (GIÀ CORRETTA)
-		echo '<p><label>' . esc_html__('Raccolta fondi', 'terzo-conto') . '</label><br /><select name="raccolta_fondi_id">';
-		echo '<option value="0">' . esc_html__('Nessuna raccolta', 'terzo-conto') . '</option>';
+		echo '<p><label>' . esc_html__('Raccolta fondi', 'terzoconto-rendiconto-ets') . '</label><br /><select name="raccolta_fondi_id">';
+		echo '<option value="0">' . esc_html__('Nessuna raccolta', 'terzoconto-rendiconto-ets') . '</option>';
 		$selected_raccolta = (int) ($movimento['raccolta_fondi_id'] ?? 0);
 		foreach ($raccolte as $raccolta) {
 			echo '<option value="' . esc_attr($raccolta['id']) . '"' . selected($selected_raccolta, (int)$raccolta['id'], false) . '>'
@@ -1112,7 +1112,7 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		//ANAGRAFICA (FIX VERO)
-		echo '<p><label>' . esc_html__('Anagrafica', 'terzo-conto') . '</label><br />';
+		echo '<p><label>' . esc_html__('Anagrafica', 'terzoconto-rendiconto-ets') . '</label><br />';
 		echo '<select name="anagrafica_id" id="terzoconto-anagrafica-select">';
 
 		echo '<option value="0"></option>'; // per allowClear
@@ -1130,39 +1130,39 @@ class TerzoConto_Admin {
 		echo '</select></p>';
 
 		// DESCRIZIONE
-		echo '<p><label>' . esc_html__('Descrizione', 'terzo-conto') . '</label><br />
+		echo '<p><label>' . esc_html__('Descrizione', 'terzoconto-rendiconto-ets') . '</label><br />
 			<input type="text" name="descrizione" value="' . esc_attr((string) ($movimento['descrizione'] ?? '')) . '" /></p>';
 			
 		$stato_selezionato = $movimento['stato'] ?? 'attivo';
-		echo '<p><label>' . esc_html__('Stato del Movimento', 'terzo-conto') . '</label><br />
+		echo '<p><label>' . esc_html__('Stato del Movimento', 'terzoconto-rendiconto-ets') . '</label><br />
 			<select name="stato">
-				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>' . esc_html__('Attivo', 'terzo-conto') . '</option>
-				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>' . esc_html__('Annullato', 'terzo-conto') . '</option>
+				<option value="attivo"' . selected($stato_selezionato, 'attivo', false) . '>' . esc_html__('Attivo', 'terzoconto-rendiconto-ets') . '</option>
+				<option value="annullato"' . selected($stato_selezionato, 'annullato', false) . '>' . esc_html__('Annullato', 'terzoconto-rendiconto-ets') . '</option>
 			</select></p>';
 
 		echo '</div>';
 
-		submit_button($is_edit ? __('Aggiorna movimento', 'terzo-conto') : __('Aggiungi movimento', 'terzo-conto'));
+		submit_button($is_edit ? __('Aggiorna movimento', 'terzoconto-rendiconto-ets') : __('Aggiungi movimento', 'terzoconto-rendiconto-ets'));
 
 		echo '</form><hr />';
 	}
 
     private function get_categoria_optgroup_label(string $tipo, string $area): string {
         $type_labels = [
-            'E' => __('Entrate', 'terzo-conto'),
-            'U' => __('Uscite', 'terzo-conto'),
+            'E' => __('Entrate', 'terzoconto-rendiconto-ets'),
+            'U' => __('Uscite', 'terzoconto-rendiconto-ets'),
         ];
 
         $area_labels = [
-            'A' => __('Attività di interesse generale', 'terzo-conto'),
-            'B' => __('Attività diverse', 'terzo-conto'),
-            'C' => __('Attività raccolta fondi', 'terzo-conto'),
-            'D' => __('Attività finanziarie/patrimoniali', 'terzo-conto'),
-            'E' => __('Supporto generale', 'terzo-conto'),
+            'A' => __('Attività di interesse generale', 'terzoconto-rendiconto-ets'),
+            'B' => __('Attività diverse', 'terzoconto-rendiconto-ets'),
+            'C' => __('Attività raccolta fondi', 'terzoconto-rendiconto-ets'),
+            'D' => __('Attività finanziarie/patrimoniali', 'terzoconto-rendiconto-ets'),
+            'E' => __('Supporto generale', 'terzoconto-rendiconto-ets'),
         ];
 
-        $type_label = $type_labels[$tipo] ?? __('Categorie', 'terzo-conto');
-        $area_label = $area_labels[$area] ?? __('Area non specificata', 'terzo-conto');
+        $type_label = $type_labels[$tipo] ?? __('Categorie', 'terzoconto-rendiconto-ets');
+        $area_label = $area_labels[$area] ?? __('Area non specificata', 'terzoconto-rendiconto-ets');
 
         return sprintf('%s - %s (%s)', $type_label, $area_label, $area !== '' ? $area : '-');
     }
@@ -1171,7 +1171,7 @@ class TerzoConto_Admin {
 
 	    $html = '<select name="'.esc_attr($name).'" '.($required ? 'required' : '').'>';
 	
-	    $html .= '<option value="">' . esc_html__('-- categoria --', 'terzo-conto') . '</option>';
+	    $html .= '<option value="">' . esc_html__('-- categoria --', 'terzoconto-rendiconto-ets') . '</option>';
 	
 	    $grouped_categories = [];
 	
@@ -1221,13 +1221,13 @@ class TerzoConto_Admin {
 		    '_wpnonce',
 		    false
 		);
-        echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzo-conto') . '</label>';
+        echo '<label for="stato_movimento" style="margin-right:8px;">' . esc_html__('Filtra per stato', 'terzoconto-rendiconto-ets') . '</label>';
         echo '<select name="stato_movimento" id="stato_movimento">';
-        echo '<option value="">' . esc_html__('Tutti gli stati', 'terzo-conto') . '</option>';
-        echo '<option value="attivo"' . selected($stato_filter, 'attivo', false) . '>' . esc_html__('Attivo', 'terzo-conto') . '</option>';
-        echo '<option value="annullato"' . selected($stato_filter, 'annullato', false) . '>' . esc_html__('Annullato', 'terzo-conto') . '</option>';
+        echo '<option value="">' . esc_html__('Tutti gli stati', 'terzoconto-rendiconto-ets') . '</option>';
+        echo '<option value="attivo"' . selected($stato_filter, 'attivo', false) . '>' . esc_html__('Attivo', 'terzoconto-rendiconto-ets') . '</option>';
+        echo '<option value="annullato"' . selected($stato_filter, 'annullato', false) . '>' . esc_html__('Annullato', 'terzoconto-rendiconto-ets') . '</option>';
         echo '</select> ';
-        submit_button(__('Filtra', 'terzo-conto'), 'secondary', '', false);
+        submit_button(__('Filtra', 'terzoconto-rendiconto-ets'), 'secondary', '', false);
         echo '</form>';
     }
 
@@ -1271,27 +1271,27 @@ class TerzoConto_Admin {
         }
 
         $label = trim((string) (($anagrafica['nome'] ?? '') . ' ' . ($anagrafica['cognome'] ?? '')));
-        return $label !== '' ? $label : (string) __('Anagrafica senza nome', 'terzo-conto');
+        return $label !== '' ? $label : (string) __('Anagrafica senza nome', 'terzoconto-rendiconto-ets');
     }
 
     private function handle_import_preview(): void {
 		$tmp_name = (string) ($_FILES['csv_file']['tmp_name'] ?? '');
 		if (! isset($_FILES['csv_file']) || $tmp_name === '') {
-		add_settings_error('terzoconto', 'import_missing_file', __('File mancante', 'terzo-conto'), 'error');
+		add_settings_error('terzoconto', 'import_missing_file', __('File mancante', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 		if (! isset($_FILES['csv_file']['error']) || (int) $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-			add_settings_error('terzoconto', 'import_upload_error', __('Errore upload file', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_upload_error', __('Errore upload file', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 		if (! isset($_FILES['csv_file']['size']) || (int) $_FILES['csv_file']['size'] > 2 * 1024 * 1024) {
-			add_settings_error('terzoconto', 'import_file_too_large', __('File troppo grande (max 2MB)', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_file_too_large', __('File troppo grande (max 2MB)', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 		$file_name = sanitize_file_name((string) ($_FILES['csv_file']['name'] ?? ''));
 		$file_ext = strtolower((string) pathinfo($file_name, PATHINFO_EXTENSION));
 		if ($file_ext !== 'csv') {
-			add_settings_error('terzoconto', 'import_invalid_extension', __('Estensione file non valida (solo .csv)', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_invalid_extension', __('Estensione file non valida (solo .csv)', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 		$allowed_mimes = ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'];
@@ -1307,7 +1307,7 @@ class TerzoConto_Admin {
 			}
 		}
 		if (! $mime_ok_wp && ! $mime_ok_finfo) {
-			add_settings_error('terzoconto', 'import_invalid_mime', __('Tipo file non valido', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_invalid_mime', __('Tipo file non valido', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 
@@ -1316,7 +1316,7 @@ class TerzoConto_Admin {
 		$rows = $this->import_service->parse_csv($tmp_name, $provider);
 
 		if ($rows === []) {
-			add_settings_error('terzoconto', 'import_empty', __('CSV vuoto', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_empty', __('CSV vuoto', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 
@@ -1329,7 +1329,7 @@ class TerzoConto_Admin {
 			'duplicates' => $duplicates,
 		]);
 
-		add_settings_error('terzoconto', 'import_ok', __('Anteprima generata', 'terzo-conto'), 'updated');
+		add_settings_error('terzoconto', 'import_ok', __('Anteprima generata', 'terzoconto-rendiconto-ets'), 'updated');
 	}
 
     private function handle_import_commit(): void {
@@ -1348,7 +1348,7 @@ class TerzoConto_Admin {
         }
 
 		if (empty($rows)) {
-			add_settings_error('terzoconto', 'import_no_data', __('Nessun dato da importare', 'terzo-conto'), 'error');
+			add_settings_error('terzoconto', 'import_no_data', __('Nessun dato da importare', 'terzoconto-rendiconto-ets'), 'error');
 			return;
 		}
 
@@ -1396,7 +1396,7 @@ class TerzoConto_Admin {
 
 		delete_transient($this->get_import_preview_transient_key());
 		/* translators: %d = number of imported movements */
-		add_settings_error('terzoconto', 'import_done', esc_html(sprintf(__('Import completato: %d movimenti', 'terzo-conto'), $imported)), 'updated');
+		add_settings_error('terzoconto', 'import_done', esc_html(sprintf(__('Import completato: %d movimenti', 'terzoconto-rendiconto-ets'), $imported)), 'updated');
 	}
 
     private function get_import_preview_transient_key(): string {
@@ -1476,17 +1476,17 @@ class TerzoConto_Admin {
 
     private function validate_conto_data(array $data): bool {
         if ($data['nome'] === '') {
-            add_settings_error('terzoconto_conti', 'conto_nome', __('Il nome conto è obbligatorio.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_conti', 'conto_nome', __('Il nome conto è obbligatorio.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         if (! $this->validator->is_valid_conto_name($data['nome'])) {
-            add_settings_error('terzoconto_conti', 'conto_nome_length', __('Il nome conto deve contenere tra 2 e 120 caratteri.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_conti', 'conto_nome_length', __('Il nome conto deve contenere tra 2 e 120 caratteri.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         if (! $this->validator->is_valid_short_text($data['descrizione'])) {
-            add_settings_error('terzoconto_conti', 'conto_descrizione_length', __('La descrizione conto può contenere al massimo 255 caratteri.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_conti', 'conto_descrizione_length', __('La descrizione conto può contenere al massimo 255 caratteri.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
@@ -1497,15 +1497,15 @@ class TerzoConto_Admin {
         $status = sanitize_text_field(wp_unslash($_GET['tc_conto_status'] ?? ''));
 
         if ($status === 'created') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto creato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto creato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'updated') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto aggiornato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto aggiornato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'deleted') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto eliminato con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Conto eliminato con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'cannot_delete') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare il conto: è associato a uno o più movimenti.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare il conto: è associato a uno o più movimenti.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'error') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sui conti non riuscita.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sui conti non riuscita.', 'terzoconto-rendiconto-ets') . '</p></div>';
         }
     }
 
@@ -1588,34 +1588,34 @@ class TerzoConto_Admin {
 
     private function validate_raccolta_data(array $data): bool {
         if ($data['nome'] === '') {
-            add_settings_error('terzoconto_raccolte', 'raccolta_nome', __('Il nome raccolta è obbligatorio.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_nome', __('Il nome raccolta è obbligatorio.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         if ($data['data_inizio'] === '') {
-            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio', __('La data di inizio è obbligatoria.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio', __('La data di inizio è obbligatoria.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
 
         if (! $this->validator->is_valid_date($data['data_inizio'])) {
-            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio_format', __('La data di inizio non è valida.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_inizio_format', __('La data di inizio non è valida.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         $allowed_status = ['aperta', 'chiusa'];
         if (! in_array($data['stato'], $allowed_status, true)) {
-            add_settings_error('terzoconto_raccolte', 'raccolta_stato', __('Lo stato selezionato non è valido.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_stato', __('Lo stato selezionato non è valido.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         if ($data['data_fine'] !== '' && ! $this->validator->is_valid_date($data['data_fine'])) {
-            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine_format', __('La data di fine non è valida.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine_format', __('La data di fine non è valida.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
         if ($data['data_fine'] !== '' && $data['data_fine'] < $data['data_inizio']) {
-            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine', __('La data di fine deve essere uguale o successiva alla data di inizio.', 'terzo-conto'), 'error');
+            add_settings_error('terzoconto_raccolte', 'raccolta_data_fine', __('La data di fine deve essere uguale o successiva alla data di inizio.', 'terzoconto-rendiconto-ets'), 'error');
             return false;
         }
 
@@ -1626,15 +1626,15 @@ class TerzoConto_Admin {
         $status = sanitize_text_field(wp_unslash($_GET['tc_raccolta_status'] ?? ''));
 
         if ($status === 'created') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta creata con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta creata con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'updated') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta aggiornata con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta aggiornata con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'deleted') {
-            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta eliminata con successo.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Raccolta eliminata con successo.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'cannot_delete') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare la raccolta: è associata a uno o più movimenti.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Non puoi eliminare la raccolta: è associata a uno o più movimenti.', 'terzoconto-rendiconto-ets') . '</p></div>';
         } elseif ($status === 'error') {
-            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sulle raccolte non riuscita.', 'terzo-conto') . '</p></div>';
+            echo '<div class="notice notice-error is-dismissible"><p>' . esc_html__('Operazione sulle raccolte non riuscita.', 'terzoconto-rendiconto-ets') . '</p></div>';
         }
     }
 
@@ -1845,7 +1845,7 @@ class TerzoConto_Admin {
             add_settings_error(
                 'terzoconto',
                 'bulk_update_error',
-                __('Operazione non riuscita. Riprova più tardi.', 'terzo-conto'),
+                __('Operazione non riuscita. Riprova più tardi.', 'terzoconto-rendiconto-ets'),
                 'error'
             );
             wp_safe_redirect(admin_url('admin.php?page=terzoconto'));
@@ -1860,27 +1860,27 @@ class TerzoConto_Admin {
 	private function render_support_box(): void{
 		?>
 		<div class="terzoconto-support-box">
-			<h2><?php echo esc_html__('☕ Supporta il progetto', 'terzo-conto'); ?></h2>
+			<h2><?php echo esc_html__('☕ Supporta il progetto', 'terzoconto-rendiconto-ets'); ?></h2>
 
 			<p>
-				<?php echo esc_html__('Questo plugin è sviluppato e mantenuto gratuitamente.', 'terzo-conto'); ?><br>
-				<?php echo esc_html__('Se ti è utile, puoi supportarlo:', 'terzo-conto'); ?>
+				<?php echo esc_html__('Questo plugin è sviluppato e mantenuto gratuitamente.', 'terzoconto-rendiconto-ets'); ?><br>
+				<?php echo esc_html__('Se ti è utile, puoi supportarlo:', 'terzoconto-rendiconto-ets'); ?>
 			</p>
 
 			<p>
 				<a href="<?php echo esc_url('https://github.com/sponsors/mjfan80'); ?>" target="_blank" rel="noopener noreferrer" class="button button-primary">
-					<?php echo esc_html__('❤️ GitHub Sponsors', 'terzo-conto'); ?>
+					<?php echo esc_html__('❤️ GitHub Sponsors', 'terzoconto-rendiconto-ets'); ?>
 				</a>
 			</p>
 
 			<p>
 				<a href="<?php echo esc_url('https://www.buymeacoffee.com/gabrieleprandini'); ?>" target="_blank" rel="noopener noreferrer" class="button">
-					<?php echo esc_html__('☕ Offrimi un caffè', 'terzo-conto'); ?>
+					<?php echo esc_html__('☕ Offrimi un caffè', 'terzoconto-rendiconto-ets'); ?>
 				</a>
 			</p>
 
 			<p style="font-size:12px; opacity:0.7;">
-				<?php echo esc_html__('Sviluppato da Gabriele Prandini (mjfan80)', 'terzo-conto'); ?>
+				<?php echo esc_html__('Sviluppato da Gabriele Prandini (mjfan80)', 'terzoconto-rendiconto-ets'); ?>
 			</p>
 		</div>
 		<?php

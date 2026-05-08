@@ -77,7 +77,7 @@ class TerzoConto_Movimenti_Repository {
         $new_year = (int) gmdate('Y', strtotime((string) $data['data_movimento']));
 
         if ($new_year !== $current_year) {
-            $this->last_error = __("Non è possibile modificare l'anno di un movimento. Eliminare il movimento e crearne uno nuovo.", 'terzo-conto');
+            $this->last_error = __("Non è possibile modificare l'anno di un movimento. Eliminare il movimento e crearne uno nuovo.", 'terzoconto-rendiconto-ets');
             return false;
         }
 

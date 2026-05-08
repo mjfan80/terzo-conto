@@ -24,7 +24,7 @@ class TerzoConto_Admin_Security {
         add_settings_error(
             'terzoconto',
             'forbidden',
-            __('Non autorizzato.', 'terzo-conto'),
+            __('Non autorizzato.', 'terzoconto-rendiconto-ets'),
             'error'
         );
 
@@ -45,7 +45,7 @@ class TerzoConto_Admin_Security {
             add_settings_error(
                 'terzoconto',
                 'invalid_nonce',
-                __('Richiesta non valida, aggiorna la pagina e riprova.', 'terzo-conto'),
+                __('Richiesta non valida, aggiorna la pagina e riprova.', 'terzoconto-rendiconto-ets'),
                 'error'
             );
             return false;
