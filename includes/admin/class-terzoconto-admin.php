@@ -1354,6 +1354,9 @@ class TerzoConto_Admin {
         if (! $this->security->assert_manage_capability()) {
             return;
         }
+		
+		check_admin_referer('terzoconto_action_nonce');
+
 
         $data = $this->sanitize_conto_data($_POST);
         $this->submitted_conto = $data;
@@ -1372,6 +1375,8 @@ class TerzoConto_Admin {
         if (! $this->security->assert_manage_capability()) {
             return;
         }
+		
+		check_admin_referer('terzoconto_action_nonce');
 
         $id = absint(wp_unslash($_POST['id'] ?? 0));
         $data = $this->sanitize_conto_data($_POST);
@@ -1394,6 +1399,9 @@ class TerzoConto_Admin {
         if (! $this->security->assert_manage_capability()) {
             return;
         }
+		
+		check_admin_referer('terzoconto_action_nonce');
+
 
         $id = absint(wp_unslash($_POST['id'] ?? 0));
         if ($id <= 0) {
