@@ -57,11 +57,12 @@ class TerzoConto_Import_Service {
         $rows = [];
     
         $normalized_path = wp_normalize_path($file_path);
-        if (validate_file($normalized_path) !== 0 || ! file_exists($normalized_path)) {
-            return $rows;
-        }
-    
-        $lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
+
+		if (! file_exists($normalized_path) || ! is_readable($normalized_path)) {
+			return $rows;
+		}
+
+		$lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
     
         if ($lines === false || count($lines) === 0) {
             return $rows;
@@ -109,11 +110,12 @@ class TerzoConto_Import_Service {
         $rows = [];
     
         $normalized_path = wp_normalize_path($file_path);
-        if (validate_file($normalized_path) !== 0 || ! file_exists($normalized_path)) {
-            return $rows;
-        }
-    
-        $lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
+
+		if (! file_exists($normalized_path) || ! is_readable($normalized_path)) {
+			return $rows;
+		}
+
+		$lines = file($normalized_path, FILE_IGNORE_NEW_LINES);
     
         if ($lines === false || count($lines) === 0) {
             return $rows;
