@@ -692,13 +692,11 @@ class TerzoConto_Admin {
 
 				echo '<td><input type="text" name="rows[' . esc_attr($i) . '][descrizione]" value="' . esc_attr($row['descrizione']) . '" style="width:100%"></td>';
 
-				echo '<td>' . wp_kses_post(
-					$this->render_categoria_select_html(
-						$categorie,
-						'rows[' . esc_attr($i) . '][categoria_id]',
-						0,
-						true
-					)
+				echo '<td>' . $this->render_categoria_select_html(
+					$categorie,
+					'rows[' . esc_attr($i) . '][categoria_id]',
+					0,
+					true
 				) . '</td>';
 				
 				echo '<td><select name="rows['.  esc_attr($i) .'][conto_id]" required>';
